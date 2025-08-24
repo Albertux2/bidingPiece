@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "biding-piece:block/biding_chair" },
+    "facing=east":  { "model": "biding-piece:block/biding_chair", "y": 90 },
+    "facing=south": { "model": "biding-piece:block/biding_chair", "y": 180 },
+    "facing=west":  { "model": "biding-piece:block/biding_chair", "y": 270 }
+  }
+}
