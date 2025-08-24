@@ -7,7 +7,9 @@ public final class Messages {
     }
 
     public static final String AUCTION_FREE_SLOT_REQUIRED = "You need at least 1 free item slot in your inventory to " +
-        "join to the auction";
+        "join the auction";
 
     public static final String INACTIVE_AUCTION = "Wait until the auction starts";
+
+    public static final String QUANTITY_EXCEEDED = "You don't have enough quantity of that item";
 }

@@ -10,6 +10,6 @@ public final class Messager {
     }
 
     public static void messageToPlayer(PlayerEntity player, String message) {
-        player.sendMessage(new StringTextComponent(message), player.getUUID());
+        player.displayClientMessage(new StringTextComponent(message), true);
     }
 }
