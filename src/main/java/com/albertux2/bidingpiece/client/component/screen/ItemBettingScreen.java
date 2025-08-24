@@ -57,6 +57,10 @@ public class ItemBettingScreen extends Screen {
         quantityField.setFilter(s -> s.matches("\\d*") && (s.isEmpty() || Long.parseLong(s) < Integer.MAX_VALUE));
         this.children.add(quantityField);
 
+        renderButtons();
+    }
+
+    private void renderButtons() {
         addBtn = new FancyButton(0, 0, (int) Math.round(64 * uiScale()), (int) Math.round(24 * uiScale()), new StringTextComponent("Add"), (b) -> addSelectedItem());
         backBtn = new FancyButton((int) Math.round(10 * uiScale()), (int) Math.round(10 * uiScale()), (int) Math.round(70 * uiScale()), (int) Math.round(24 * uiScale()), new StringTextComponent("← Back"), (b) -> Minecraft.getInstance().setScreen(parent));
         submitBtn = new FancyButton(0, 0, (int) Math.round(180 * uiScale()), (int) Math.round(26 * uiScale()), new StringTextComponent("Submit Bet"), (b) -> submitBet());
