@@ -17,143 +17,157 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ItemBettingScreen extends Screen {
+    private static final int SCROLLBAR_W = 6;
+    private static final int PAD_L = 16;
+    private static final int PAD_R = 16;
+
     private final Screen parent;
     private final PlayerEntity player;
-    private final List<BetItem> betItems;
+    private final List<BetItem> betItems = new ArrayList<>();
+
     private TextFieldWidget quantityField;
-    private ItemStack selectedStack = ItemStack.EMPTY;
-    private int scrollOffsetInv = 0;
-    private int scrollOffsetList = 0;
-    private final List<ItemStack> flatennedInventory;
-    private String errorMessage;
-
-    private int gridStartX;
-    private int gridStartY;
-    private int itemsPerRow;
-    private int maxRows;
-    private int cellSize;
-    private int cellPad;
-    private int cellPitch;
-
-    private int listStartY;
-    private int listVisibleCount;
-    private int listItemHeight;
-
-    private int bottomPanelH;
-    private int bottomPanelPad;
-
     private FancyButton addBtn;
     private FancyButton backBtn;
     private FancyButton submitBtn;
+
+    private ItemStack selectedStack = ItemStack.EMPTY;
+    private int scrollOffsetInv = 0;
+    private int scrollOffsetList = 0;
+    private final List<ItemStack> flatInventory;
+
+    private String errorMessage;
+
+    private int gridStartX, gridStartY, itemsPerRow, maxRows, cellSize, cellPad, cellPitch;
+    private int listStartY, listVisibleCount, listItemHeight;
+    private int bottomPanelH, bottomPanelPad;
 
     public ItemBettingScreen(Screen parent) {
         super(new StringTextComponent("Item Betting"));
         this.parent = parent;
         this.player = Minecraft.getInstance().player;
-        this.betItems = new ArrayList<>();
-        this.flatennedInventory = flattenInventory(Minecraft.getInstance().player);
+        this.flatInventory = flattenInventory(this.player);
     }
 
     @Override
     protected void init() {
-        super.init();
-        recalcLayout();
-        this.quantityField = new TextFieldWidget(this.font, 0, 0, (int) Math.round(120 * uiScale()), (int) Math.round(20 * uiScale()), new StringTextComponent(""));
-        this.quantityField.setValue("1");
-        this.quantityField.setFilter(s -> s.matches("\\d*") && (s.isEmpty() || Long.parseLong(s) < Integer.MAX_VALUE));
-        this.children.add(this.quantityField);
+        relayout();
 
-        this.addBtn = new FancyButton(0, 0, (int) Math.round(64 * uiScale()), (int) Math.round(24 * uiScale()), new StringTextComponent("Add"), (b) -> addSelectedItem());
-        this.backBtn = new FancyButton((int) Math.round(10 * uiScale()), (int) Math.round(10 * uiScale()), (int) Math.round(70 * uiScale()), (int) Math.round(24 * uiScale()), new StringTextComponent("← Back"), (b) -> Minecraft.getInstance().setScreen(parent));
-        this.submitBtn = new FancyButton(0, 0, (int) Math.round(180 * uiScale()), (int) Math.round(26 * uiScale()), new StringTextComponent("Submit Bet"), (b) -> submitBet());
+        quantityField = new TextFieldWidget(this.font, 0, 0, (int) Math.round(120 * uiScale()), (int) Math.round(20 * uiScale()), new StringTextComponent(""));
+        quantityField.setValue("1");
+        quantityField.setFilter(s -> s.matches("\\d*") && (s.isEmpty() || Long.parseLong(s) < Integer.MAX_VALUE));
+        this.children.add(quantityField);
 
-        this.addButton(addBtn);
-        this.addButton(backBtn);
-        this.addButton(submitBtn);
+        addBtn = new FancyButton(0, 0, (int) Math.round(64 * uiScale()), (int) Math.round(24 * uiScale()), new StringTextComponent("Add"), (b) -> addSelectedItem());
+        backBtn = new FancyButton((int) Math.round(10 * uiScale()), (int) Math.round(10 * uiScale()), (int) Math.round(70 * uiScale()), (int) Math.round(24 * uiScale()), new StringTextComponent("← Back"), (b) -> Minecraft.getInstance().setScreen(parent));
+        submitBtn = new FancyButton(0, 0, (int) Math.round(180 * uiScale()), (int) Math.round(26 * uiScale()), new StringTextComponent("Submit Bet"), (b) -> submitBet());
+
+        addButton(addBtn);
+        addButton(backBtn);
+        addButton(submitBtn);
     }
 
     private double uiScale() {
-        double sw = this.width / 854.0;
-        double sh = this.height / 480.0;
-        double s = Math.min(sw, sh);
-        return Math.max(0.85, Math.min(1.25, s));
+        double guiScale = (double) Minecraft.getInstance().getWindow().getHeight() / (double) this.height;
+        double s = 1.35 / guiScale;
+        return Math.max(1.00, Math.min(1.40, s));
     }
 
-    private void recalcLayout() {
+    private int minListRowsDynamic() {
+        return (this.height <= 320) ? 3 : 4;
+    }
+
+    private void relayout() {
         double s = uiScale();
 
-        this.cellSize = Math.max(22, (int) Math.round(28 * s));
-        this.cellPad = Math.max(2, (int) Math.round(4 * s));
-        this.cellPitch = cellSize + cellPad + cellPad;
+        cellSize = Math.max(22, (int) Math.round(28 * s));
+        cellPad = Math.max(2, (int) Math.round(4 * s));
+        cellPitch = cellSize + cellPad + cellPad;
 
-        this.listItemHeight = Math.max(cellSize + 8, (int) Math.round(24 * s));
-        this.bottomPanelPad = Math.max(4, (int) Math.round(6 * s));
-        this.bottomPanelH = Math.max((int) Math.round(40 * s), this.font.lineHeight + (int) Math.round(22 * s));
-
+        listItemHeight = Math.max(cellSize + 8, (int) Math.round(24 * s));
+        bottomPanelPad = Math.max(4, (int) Math.round(6 * s));
+        bottomPanelH = Math.max((int) Math.round(40 * s), this.font.lineHeight + (int) Math.round(22 * s));
 
         int left = Math.max(12, (int) Math.round(20 * s));
         int right = left;
         int top = Math.max(40, (int) Math.round(56 * s));
-        int gap = Math.max(8, (int) Math.round(12 * s));
+        int gap = Math.max(16, (int) Math.round(20 * s));
+        int reserveSB = SCROLLBAR_W + 4;
 
-        this.itemsPerRow = Math.max(1, Math.min(9, (this.width - left - right) / this.cellPitch));
+        itemsPerRow = Math.max(1, Math.min(9, (this.width - left - right - reserveSB) / cellPitch));
 
-        int availableH = Math.max(this.cellPitch, this.height - top - bottomPanelH - gap);
-        int minListRows = 4;
-        int reservedForList = minListRows * this.listItemHeight + gap;
+        int availableH = Math.max(cellPitch, this.height - top - bottomPanelH - bottomPanelPad - gap);
+        int reservedForList = minListRowsDynamic() * listItemHeight + gap;
 
-        int gridHeight = Math.max(this.cellPitch, availableH - reservedForList);
-        this.maxRows = Math.max(1, gridHeight / this.cellPitch);
+        int gridHeight = Math.max(cellPitch, availableH - reservedForList);
+        maxRows = Math.max(1, gridHeight / cellPitch);
 
-        while (this.maxRows > 1) {
-            int usedByGrid = this.maxRows * this.cellPitch;
+        while (maxRows > 1) {
+            int usedByGrid = maxRows * cellPitch;
             int leftForList = availableH - usedByGrid - gap;
-            if (leftForList >= minListRows * this.listItemHeight) break;
-            this.maxRows--;
+            if (leftForList >= minListRowsDynamic() * listItemHeight) break;
+            maxRows--;
         }
 
-        this.gridStartX = left + ((this.width - left - right) - (this.itemsPerRow * this.cellPitch - cellPad - cellPad)) / 2;
-        this.gridStartY = top;
+        gridStartX = left + ((this.width - left - right - reserveSB) - (itemsPerRow * cellPitch - cellPad - cellPad)) / 2;
+        gridStartY = top;
 
-        this.listStartY = this.gridStartY + this.maxRows * this.cellPitch + gap;
-        int listSpace = Math.max(0, this.height - bottomPanelH - this.listStartY);
-        this.listVisibleCount = Math.max(minListRows, listSpace / this.listItemHeight);
+        listStartY = gridStartY + maxRows * cellPitch + gap;
+        int listSpace = Math.max(0, this.height - bottomPanelH - bottomPanelPad - listStartY);
+        listVisibleCount = Math.max(minListRowsDynamic(), listSpace / listItemHeight);
 
-        int invRows = Math.max(1, (int) Math.ceil(flatennedInventory.size() / (double) itemsPerRow));
+        clampScrolls();
+    }
+
+    private int visibleListSlots() {
+        int panelTop = this.height - bottomPanelH;
+        int maxRowsBySpace = Math.max(0, (panelTop - bottomPanelPad - listStartY) / listItemHeight);
+        return Math.max(minListRowsDynamic(), Math.min(listVisibleCount, maxRowsBySpace));
+    }
+
+    private int totalInventoryRows() {
+        return Math.max(1, (int) Math.ceil(flatInventory.size() / (double) itemsPerRow));
+    }
+
+    private void clampScrolls() {
+        int invRows = totalInventoryRows();
         int maxScrollInv = Math.max(0, invRows - maxRows);
-        this.scrollOffsetInv = Math.max(0, Math.min(this.scrollOffsetInv, maxScrollInv));
+        scrollOffsetInv = clamp(scrollOffsetInv, 0, maxScrollInv);
 
-        int maxScrollList = Math.max(0, betItems.size() - listVisibleCount);
-        this.scrollOffsetList = Math.max(0, Math.min(this.scrollOffsetList, maxScrollList));
+        int vis = visibleListSlots();
+        int maxScrollList = Math.max(0, betItems.size() - vis);
+        scrollOffsetList = clamp(scrollOffsetList, 0, maxScrollList);
     }
 
     private void addSelectedItem() {
-        if (!selectedStack.isEmpty() && !quantityField.getValue().isEmpty()) {
-            int quantity = Integer.parseInt(quantityField.getValue());
-            if (quantity > 0) {
-                BetItem existing = betItems.stream().filter(item -> ItemStack.isSame(item.stack, selectedStack)).findFirst().orElse(null);
-                if (existing != null) {
-                    int newQuantity = existing.quantity + quantity;
-                    if (hasEnoughQuantity(newQuantity)) {
-                        existing.quantity += quantity;
-                        this.errorMessage = null;
-                    }
-                } else {
-                    if (hasEnoughQuantity(quantity)) {
-                        betItems.add(new BetItem(selectedStack.copy(), quantity));
-                        this.errorMessage = null;
-                    }
-                }
-                quantityField.setValue("1");
-                recalcLayout();
+        if (selectedStack.isEmpty()) return;
+        if (quantityField.getValue().isEmpty()) return;
+
+        int quantity = Integer.parseInt(quantityField.getValue());
+        if (quantity <= 0) return;
+
+        BetItem existing = betItems.stream().filter(i -> ItemStack.isSame(i.stack, selectedStack)).findFirst().orElse(null);
+        if (existing != null) {
+            int newQ = existing.quantity + quantity;
+            if (hasEnoughQuantity(newQ)) {
+                existing.quantity = newQ;
+                errorMessage = null;
+            }
+        } else {
+            if (hasEnoughQuantity(quantity)) {
+                betItems.add(new BetItem(selectedStack.copy(), quantity));
+                errorMessage = null;
             }
         }
+        quantityField.setValue("1");
+        relayout();
+        int vis = visibleListSlots();
+        scrollOffsetList = Math.min(scrollOffsetList, Math.max(0, betItems.size() - vis));
     }
 
     private Boolean hasEnoughQuantity(int quantity) {
-        Boolean b = flatennedInventory.stream().filter(item -> ItemStack.isSame(item, selectedStack)).map(item -> item.getCount() >= quantity).findFirst().orElse(true);
-        if (!b) this.errorMessage = Messages.QUANTITY_EXCEEDED;
-        return b;
+        Boolean ok = flatInventory.stream().filter(i -> ItemStack.isSame(i, selectedStack)).map(i -> i.getCount() >= quantity).findFirst().orElse(true);
+        if (!ok) errorMessage = Messages.QUANTITY_EXCEEDED;
+        return ok;
     }
 
     private void submitBet() {
@@ -162,14 +176,33 @@ public class ItemBettingScreen extends Screen {
     @Override
     public void render(MatrixStack ms, int mouseX, int mouseY, float partialTicks) {
         this.fillGradient(ms, 0, 0, this.width, this.height, 0x80000000, 0x80202020);
-        recalcLayout();
+        relayout();
 
         int panelTop = this.height - bottomPanelH;
-        fill(ms, 0, panelTop, this.width, this.height, 0xB0202020);
+        fill(ms, PAD_L, panelTop, this.width - PAD_R, this.height, 0xB0202020);
 
-        int leftPad = 20;
+        layoutBottomRow(ms, panelTop);
+
+        renderInventory(ms, mouseX, mouseY);
+        renderSelectedList(ms, mouseX, mouseY);
+
+        super.render(ms, mouseX, mouseY, partialTicks);
+        quantityField.render(ms, mouseX, mouseY, partialTicks);
+
+        int yourItemsX = backBtn.x + backBtn.getWidth() + (int) Math.round(12 * uiScale());
+        int yourItemsY = backBtn.y + (backBtn.getHeight() - this.font.lineHeight) / 2 - 1;
+        this.font.draw(ms, "Your Items:", yourItemsX, yourItemsY, 0xFFFFFF);
+        this.font.draw(ms, "Selected Items:", PAD_L, listStartY - (int) Math.round(18 * uiScale()), 0xFFFFFF);
+
+        if (StringUtils.isNotBlank(errorMessage)) {
+            DrawUtils.drawTextWithBorder(ms, this.font, errorMessage, PAD_L, panelTop - (int) Math.round(18 * uiScale()), 0xffab2a3e, 0xFFFFFF);
+        }
+    }
+
+    private void layoutBottomRow(MatrixStack ms, int panelTop) {
+        int leftPad = PAD_L;
         int gap = (int) Math.round(8 * uiScale());
-        int rowH = Math.max(this.quantityField.getHeight(), this.addBtn.getHeight());
+        int rowH = Math.max(quantityField.getHeight(), addBtn.getHeight());
         int rowY = panelTop + (bottomPanelH - rowH) / 2;
 
         String qtyTxt = "Quantity:";
@@ -177,151 +210,158 @@ public class ItemBettingScreen extends Screen {
         int labelW = this.font.width(qtyTxt);
         this.font.draw(ms, qtyTxt, labelX, rowY + (rowH - this.font.lineHeight) / 2, 0xFFFFFF);
 
-        int minInputW = (int) Math.round(100 * uiScale());
+        int minInputW = (int) Math.round(120 * uiScale());
         int addW = (int) Math.round(64 * uiScale());
         int submitW = (int) Math.round(180 * uiScale());
 
-        this.submitBtn.setWidth(submitW);
-        this.submitBtn.y = rowY;
-        this.submitBtn.x = this.width - submitW - leftPad;
+        submitBtn.setWidth(submitW);
+        submitBtn.y = rowY;
+        submitBtn.x = this.width - PAD_R - submitW;
 
         int inputX = labelX + labelW + gap;
-        int maxInputRight = this.submitBtn.x - gap - addW - gap;
+        int maxInputRight = submitBtn.x - gap - addW - gap;
         int inputW = Math.max(minInputW, maxInputRight - inputX);
 
-        this.quantityField.setWidth(inputW);
-        this.quantityField.x = inputX;
-        this.quantityField.y = rowY;
+        quantityField.setWidth(inputW);
+        quantityField.x = inputX;
+        quantityField.y = rowY;
 
-        this.addBtn.setWidth(addW);
-        this.addBtn.x = this.quantityField.x + this.quantityField.getWidth() + gap;
-        this.addBtn.y = rowY;
-
-        renderInventoryGrid(ms, mouseX, mouseY);
-        renderBetList(ms, mouseX, mouseY);
-
-        super.render(ms, mouseX, mouseY, partialTicks);
-        this.quantityField.render(ms, mouseX, mouseY, partialTicks);
-
-        int yourItemsX = backBtn.x + backBtn.getWidth() + (int) Math.round(12 * uiScale());
-        int yourItemsY = backBtn.y + (backBtn.getHeight() - this.font.lineHeight) / 2;
-        this.font.draw(ms, "Your Items:", yourItemsX, yourItemsY, 0xFFFFFF);
-        this.font.draw(ms, "Selected Items:", 20, this.listStartY - (int) Math.round(18 * uiScale()), 0xFFFFFF);
-
-        if (StringUtils.isNotBlank(this.errorMessage)) {
-            DrawUtils.drawTextWithBorder(ms, this.font, this.errorMessage, 20, panelTop - (int) Math.round(18 * uiScale()), 0xffab2a3e, 0xFFFFFF);
-        }
+        addBtn.setWidth(addW);
+        addBtn.x = quantityField.x + quantityField.getWidth() + gap;
+        addBtn.y = rowY;
     }
 
-
-    private void renderInventoryGrid(MatrixStack ms, int mouseX, int mouseY) {
-        List<ItemStack> inventory = this.flatennedInventory;
-        for (int row = 0; row < this.maxRows; row++) {
-            for (int col = 0; col < this.itemsPerRow; col++) {
+    private void renderInventory(MatrixStack ms, int mouseX, int mouseY) {
+        for (int row = 0; row < maxRows; row++) {
+            for (int col = 0; col < itemsPerRow; col++) {
                 int index = (row + scrollOffsetInv) * itemsPerRow + col;
-                if (index >= inventory.size()) break;
-                ItemStack stack = inventory.get(index);
+                if (index >= flatInventory.size()) break;
+                ItemStack stack = flatInventory.get(index);
                 if (stack.isEmpty()) continue;
 
-                int x = gridStartX + col * this.cellPitch;
-                int y = gridStartY + row * this.cellPitch;
+                int x = gridStartX + col * cellPitch;
+                int y = gridStartY + row * cellPitch;
 
                 boolean isSelected = ItemStack.isSame(stack, selectedStack);
                 int color = isSelected ? 0xFF4A90E2 : 0xFF404040;
                 fill(ms, x - 2, y - 2, x + cellSize + 2, y + cellSize + 2, color);
                 fill(ms, x, y, x + cellSize, y + cellSize, 0xFF2A2A2A);
 
-                Minecraft.getInstance().getItemRenderer().renderGuiItem(stack, x + Math.max(2, cellSize / 4), y + Math.max(2, cellSize / 4));
-                Minecraft.getInstance().getItemRenderer().renderGuiItemDecorations(this.font, stack, x + Math.max(2, cellSize / 4), y + Math.max(2, cellSize / 4) + 4);
+                int ix = x + Math.max(2, cellSize / 4);
+                int iy = y + Math.max(2, cellSize / 4);
+                Minecraft.getInstance().getItemRenderer().renderGuiItem(stack, ix, iy);
+                Minecraft.getInstance().getItemRenderer().renderGuiItemDecorations(this.font, stack, ix, iy + 4);
 
-                if (mouseX >= x && mouseX <= x + cellSize && mouseY >= y && mouseY <= y + cellSize) {
+                if (hit(mouseX, mouseY, x, y, cellSize, cellSize)) {
                     fill(ms, x, y, x + cellSize, y + cellSize, 0x80FFFFFF);
                 }
             }
         }
+
+        int totalRows = totalInventoryRows();
+        if (totalRows > maxRows) {
+            int barX = gridStartX + itemsPerRow * cellPitch + 2;
+            int barY = gridStartY;
+            int barH = maxRows * cellPitch;
+            drawScrollbar(ms, barX, barY, barH, totalRows, maxRows, scrollOffsetInv);
+        }
     }
 
-    private void renderBetList(MatrixStack ms, int mouseX, int mouseY) {
-        int slots = Math.max(listVisibleCount, 4);
-        int panelTop = this.height - bottomPanelH;
-        int maxY = panelTop - bottomPanelPad;
-        for (int i = 0; i < slots; i++) {
+    private void renderSelectedList(MatrixStack ms, int mouseX, int mouseY) {
+        int visible = visibleListSlots();
+
+        for (int i = 0; i < visible; i++) {
             int idx = i + scrollOffsetList;
             int y = listStartY + i * listItemHeight;
-            if (y + listItemHeight > maxY) break;
 
-            fill(ms, 20, y, this.width - 20, y + listItemHeight, 0xFF333333);
+            fill(ms, PAD_L, y, this.width - PAD_R, y + listItemHeight, 0xFF333333);
 
             if (idx < betItems.size()) {
                 BetItem item = betItems.get(idx);
 
+                int iconX = PAD_L + 5;
                 int iconY = y + (listItemHeight - 16) / 2;
-                Minecraft.getInstance().getItemRenderer().renderGuiItem(item.stack, 25, iconY);
+                Minecraft.getInstance().getItemRenderer().renderGuiItem(item.stack, iconX, iconY);
 
                 int textY = y + (listItemHeight - this.font.lineHeight) / 2;
                 String name = item.stack.getHoverName().getString();
                 String quantity = " x" + item.quantity;
 
-                this.font.draw(ms, name, 50, textY, 0xFFFFFF);
-                int deleteX = this.width - (int) Math.round(50 * uiScale());
+                int nameX = PAD_L + 30;
+                this.font.draw(ms, name, nameX, textY, 0xFFFFFF);
+
+                int deleteX = this.width - PAD_R - (int) Math.round(60 * uiScale());
                 int delH = listItemHeight - 6;
                 int delW = delH;
                 int qtyX = deleteX - (int) Math.round(16 * uiScale()) - this.font.width(quantity);
 
                 this.font.draw(ms, quantity, qtyX, textY, 0xFFFFFF);
+
                 int delY = y + (listItemHeight - delH) / 2;
                 fill(ms, deleteX, delY, deleteX + delW, delY + delH, 0xFFCC4444);
                 this.font.draw(ms, "×", deleteX + delW / 2 - 3, delY + delH / 2 - this.font.lineHeight / 2, 0xFFFFFF);
 
-                if (mouseX >= deleteX && mouseX <= deleteX + delW && mouseY >= delY && mouseY <= delY + delH) {
+                if (hit(mouseX, mouseY, deleteX, delY, delW, delH)) {
                     fill(ms, deleteX, delY, deleteX + delW, delY + delH, 0xFFFF6666);
                 }
             } else {
                 int textY = y + (listItemHeight - this.font.lineHeight) / 2;
-                this.font.draw(ms, "-", 50, textY, 0x88FFFFFF);
+                this.font.draw(ms, "-", PAD_L + 30, textY, 0x88FFFFFF);
             }
         }
+
+        if (betItems.size() > visible) {
+            int barX = this.width - PAD_R - SCROLLBAR_W;
+            int barY = listStartY;
+            int barH = visible * listItemHeight;
+            drawScrollbar(ms, barX, barY, barH, betItems.size(), visible, scrollOffsetList);
+        }
+    }
+
+    private void drawScrollbar(MatrixStack ms, int x, int y, int h, int total, int visible, int offset) {
+        fill(ms, x, y, x + SCROLLBAR_W, y + h, 0xFF202020);
+        int thumbH = Math.max(20, (int) (h * (visible / (float) total)));
+        int thumbY = y + (int) ((h - thumbH) * (offset / (float) (total - visible)));
+        fill(ms, x, thumbY, x + SCROLLBAR_W, thumbY + thumbH, 0xFFAAAAAA);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        List<ItemStack> inventory = this.flatennedInventory;
-
-        for (int row = 0; row < this.maxRows; row++) {
-            for (int col = 0; col < this.itemsPerRow; col++) {
+        for (int row = 0; row < maxRows; row++) {
+            for (int col = 0; col < itemsPerRow; col++) {
                 int index = (row + scrollOffsetInv) * itemsPerRow + col;
-                if (index >= inventory.size()) break;
-                ItemStack stack = inventory.get(index);
+                if (index >= flatInventory.size()) break;
+                ItemStack stack = flatInventory.get(index);
                 if (stack.isEmpty()) continue;
 
-                int x = gridStartX + col * this.cellPitch;
-                int y = gridStartY + row * this.cellPitch;
+                int x = gridStartX + col * cellPitch;
+                int y = gridStartY + row * cellPitch;
 
-                if (mouseX >= x && mouseX <= x + cellSize && mouseY >= y && mouseY <= y + cellSize) {
+                if (hit(mouseX, mouseY, x, y, cellSize, cellSize)) {
                     selectedStack = stack;
                     return true;
                 }
             }
         }
 
-        int slots = Math.max(listVisibleCount, 4);
-        int panelTop = this.height - bottomPanelH;
-        for (int i = 0; i < slots; i++) {
+        int visible = visibleListSlots();
+        for (int i = 0; i < visible; i++) {
             int idx = i + scrollOffsetList;
             if (idx >= betItems.size()) continue;
-            int y = listStartY + i * listItemHeight;
-            if (y + listItemHeight > panelTop - bottomPanelPad) break;
 
-            int deleteX = this.width - (int) Math.round(50 * uiScale());
+            int y = listStartY + i * listItemHeight;
+            int deleteX = this.width - PAD_R - (int) Math.round(60 * uiScale());
             int delH = listItemHeight - 6;
             int delW = delH;
             int delY = y + (listItemHeight - delH) / 2;
-            if (mouseX >= deleteX && mouseX <= deleteX + delW && mouseY >= delY && mouseY <= delY + delH) {
+
+            if (hit(mouseX, mouseY, deleteX, delY, delW, delH)) {
                 betItems.remove(idx);
-                recalcLayout();
+                int maxScroll = Math.max(0, betItems.size() - visible);
+                scrollOffsetList = Math.min(scrollOffsetList, maxScroll);
+                relayout();
                 return true;
             }
-
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
@@ -331,15 +371,17 @@ public class ItemBettingScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         int gridBottom = gridStartY + maxRows * cellPitch;
         if (mouseY >= gridStartY && mouseY <= gridBottom) {
-            int invRows = Math.max(1, (int) Math.ceil(flatennedInventory.size() / (double) itemsPerRow));
-            int maxScroll = Math.max(0, invRows - maxRows);
-            scrollOffsetInv = Math.max(0, Math.min(maxScroll, scrollOffsetInv - (int) Math.signum(delta)));
+            int maxScroll = Math.max(0, totalInventoryRows() - maxRows);
+            scrollOffsetInv = clamp(scrollOffsetInv - (int) Math.signum(delta), 0, maxScroll);
             return true;
         }
-        int listBottom = (this.height - bottomPanelH) - bottomPanelPad;
+
+        int panelTop = this.height - bottomPanelH;
+        int listBottom = panelTop - bottomPanelPad;
         if (mouseY >= listStartY && mouseY <= listBottom) {
-            int maxScroll = Math.max(0, betItems.size() - listVisibleCount);
-            scrollOffsetList = Math.max(0, Math.min(maxScroll, scrollOffsetList - (int) Math.signum(delta)));
+            int visible = visibleListSlots();
+            int maxScroll = Math.max(0, betItems.size() - visible);
+            scrollOffsetList = clamp(scrollOffsetList - (int) Math.signum(delta), 0, maxScroll);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, delta);
@@ -348,7 +390,7 @@ public class ItemBettingScreen extends Screen {
     @Override
     public void resize(Minecraft mc, int w, int h) {
         super.resize(mc, w, h);
-        recalcLayout();
+        relayout();
     }
 
     @Override
@@ -361,6 +403,14 @@ public class ItemBettingScreen extends Screen {
         Map<String, BetItem> flattened = new HashMap<>();
         items.stream().filter(i -> !i.isEmpty()).forEach(x -> flattened.computeIfAbsent(x.getItem().getDescriptionId(), s -> new BetItem(x, 0)).sumQuantity(x.getCount()));
         return flattened.values().stream().map(x -> new ItemStack(x.stack.getItem(), x.quantity)).collect(Collectors.toList());
+    }
+
+    private static boolean hit(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    }
+
+    private static int clamp(int v, int min, int max) {
+        return Math.max(min, Math.min(max, v));
     }
 
     private static class BetItem {
