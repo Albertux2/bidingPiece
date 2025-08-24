@@ -6,15 +6,18 @@ import jdk.nashorn.internal.ir.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SeatableEntity extends Entity {
+public abstract class SeatableEntity extends Entity {
 
     private BlockPos anchor;
+
+    protected PlayerEntity player;
 
     public SeatableEntity(EntityType<?> type, World world) {
         super(type, world);
@@ -30,13 +33,37 @@ public class SeatableEntity extends Entity {
         this.setPos(anchor.getX() + 0.5D, anchor.getY() + yOffset, anchor.getZ() + 0.5D);
     }
 
-    @Override protected void defineSynchedData() {}
-    @Override protected void readAdditionalSaveData(CompoundNBT nbt) {}
-    @Override protected void addAdditionalSaveData(CompoundNBT nbt) {}
-    @Override public boolean isPickable() { return false; }
-    @Override public boolean isPushable() { return false; }
-    @Override public IPacket<?> getAddEntityPacket() { return NetworkHooks.getEntitySpawningPacket(this); }
-    @Override public double getPassengersRidingOffset() { return 0.0D; }
+    @Override
+    protected void defineSynchedData() {
+    }
+
+    @Override
+    protected void readAdditionalSaveData(CompoundNBT nbt) {
+    }
+
+    @Override
+    protected void addAdditionalSaveData(CompoundNBT nbt) {
+    }
+
+    @Override
+    public boolean isPickable() {
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false;
+    }
+
+    @Override
+    public IPacket<?> getAddEntityPacket() {
+        return NetworkHooks.getEntitySpawningPacket(this);
+    }
+
+    @Override
+    public double getPassengersRidingOffset() {
+        return 0.0D;
+    }
 
     @Override
     public void tick() {
@@ -47,7 +74,10 @@ public class SeatableEntity extends Entity {
         }
     }
 
-    public void sit(PlayerEntity player) { player.startRiding(this, false); }
+    public void sit(PlayerEntity player) {
+        player.startRiding(this, false);
+        this.player = player;
+    }
 
     @Override
     protected void removePassenger(Entity passenger) {

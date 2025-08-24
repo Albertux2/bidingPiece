@@ -1,6 +1,7 @@
 package com.albertux2.bidingpiece.block;
 
 import com.albertux2.bidingpiece.auction.AuctionServerManager;
+import com.albertux2.bidingpiece.entity.BidingSeat;
 import com.albertux2.bidingpiece.entity.SeatableEntity;
 import com.albertux2.bidingpiece.item.AuctionPaddle;
 import com.albertux2.bidingpiece.messaging.Messager;
@@ -129,7 +130,7 @@ public class BidingChair extends Block {
             return false;
         }
 
-        seat = new SeatableEntity(world, pos, yOff);
+        seat = new BidingSeat(world, pos, yOff);
         world.addFreshEntity(seat);
 
         Direction f = state.getValue(FACING);

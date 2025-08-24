@@ -1,6 +1,7 @@
 package com.albertux2.bidingpiece.registry;
 
 import com.albertux2.bidingpiece.BidingPiece;
+import com.albertux2.bidingpiece.entity.BidingSeat;
 import com.albertux2.bidingpiece.entity.SeatableEntity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
@@ -12,8 +13,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITIES, BidingPiece.MOD_ID);
 
-    public static final RegistryObject<EntityType<SeatableEntity>> SEAT = ENTITIES.register("seat",
-        () -> EntityType.Builder.<SeatableEntity>of(SeatableEntity::new, EntityClassification.MISC)
+    public static final RegistryObject<EntityType<BidingSeat>> SEAT = ENTITIES.register("seat",
+        () -> EntityType.Builder.<BidingSeat>of(BidingSeat::new, EntityClassification.MISC)
             .sized(0.001F, 0.001F)
             .noSave()
             .noSummon()
