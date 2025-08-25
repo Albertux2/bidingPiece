@@ -8,7 +8,6 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.StringTextComponent;
 
 public class BettingScreen extends Screen {
-    private static final ResourceLocation BACKGROUND = new ResourceLocation("minecraft", "textures/gui/demo_background.png");
     private static final int BUTTON_WIDTH = 120;
     private static final int BUTTON_HEIGHT = 25;
 
@@ -20,7 +19,6 @@ public class BettingScreen extends Screen {
     protected void init() {
         super.init();
 
-        // Botón ITEM
         this.addButton(new FancyButton(
             this.width / 2 - 65,
             this.height / 2 - 15,
