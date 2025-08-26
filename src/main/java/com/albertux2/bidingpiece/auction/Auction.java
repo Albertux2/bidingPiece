@@ -1,6 +1,5 @@
 package com.albertux2.bidingpiece.auction;
 
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import java.util.*;

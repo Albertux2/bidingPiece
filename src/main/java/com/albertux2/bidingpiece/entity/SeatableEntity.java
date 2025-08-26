@@ -2,11 +2,9 @@ package com.albertux2.bidingpiece.entity;
 
 import com.albertux2.bidingpiece.block.BidingChair;
 import com.albertux2.bidingpiece.registry.ModEntities;
-import jdk.nashorn.internal.ir.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.util.math.BlockPos;

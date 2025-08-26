@@ -4,7 +4,6 @@ import com.albertux2.bidingpiece.auction.AuctionServerManager;
 import com.albertux2.bidingpiece.entity.BidingSeat;
 import com.albertux2.bidingpiece.entity.SeatableEntity;
 import com.albertux2.bidingpiece.item.AuctionPaddle;
-import com.albertux2.bidingpiece.messaging.Messager;
 import com.albertux2.bidingpiece.messaging.Messages;
 import com.albertux2.bidingpiece.registry.ModItems;
 import net.minecraft.block.Block;
@@ -14,7 +13,6 @@ import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.DirectionProperty;
 import net.minecraft.state.StateContainer;
@@ -24,14 +22,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockRayTraceResult;
 import net.minecraft.util.math.shapes.ISelectionContext;
 import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.IBlockReader;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ToolType;
 
 import java.util.List;
-import java.util.function.Predicate;
 
 import static com.albertux2.bidingpiece.messaging.Messager.messageToPlayer;
 

@@ -4,7 +4,6 @@ import com.albertux2.bidingpiece.client.component.button.FancyButton;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.StringTextComponent;
 
 public class BettingScreen extends Screen {

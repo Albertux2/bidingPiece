@@ -3,7 +3,6 @@ package com.albertux2.bidingpiece.registry;
 import com.albertux2.bidingpiece.block.AuctionExhibitor;
 import com.albertux2.bidingpiece.block.BidingChair;
 import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.RenderTypeLookup;
 import net.minecraftforge.fml.RegistryObject;

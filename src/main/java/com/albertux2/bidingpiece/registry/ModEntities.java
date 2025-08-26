@@ -2,7 +2,6 @@ package com.albertux2.bidingpiece.registry;
 
 import com.albertux2.bidingpiece.BidingPiece;
 import com.albertux2.bidingpiece.entity.BidingSeat;
-import com.albertux2.bidingpiece.entity.SeatableEntity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
 import net.minecraft.util.ResourceLocation;
