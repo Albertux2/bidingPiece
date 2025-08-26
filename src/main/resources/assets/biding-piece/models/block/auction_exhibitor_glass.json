@@ -1,0 +1,23 @@
+{
+  "credit": "Blockbench",
+  "textures": {
+    "0": "biding-piece:block/auction_exhibitor",
+    "particle": "biding-piece:block/auction_exhibitor"
+  },
+  "elements": [
+    {
+      "name": "glass",
+      "from": [1.01, 9.31, 1.01],
+      "to":   [14.99, 22.59, 14.99],
+      "faces": {
+        "north": {"uv": [3, 3.5, 8, 8], "texture": "#0"},
+        "east":  {"uv": [3, 3.5, 8, 8], "texture": "#0"},
+        "south": {"uv": [3, 3.5, 8, 8], "texture": "#0"},
+        "west":  {"uv": [3, 3.5, 8, 8], "texture": "#0"},
+        "up":    {"uv": [3, 3.5, 8, 8], "texture": "#0"},
+        "down":  {"uv": [3, 3.5, 8, 8], "texture": "#0"}
+      }
+    }
+  ],
+  "render_type": "translucent"
+}

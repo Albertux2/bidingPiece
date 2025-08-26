@@ -1,6 +1,6 @@
 {
-  "variants": {
-    "": { "model": "biding-piece:block/auction_exhibitor" }
-  }
+  "multipart": [
+    { "apply": { "model": "biding-piece:block/auction_exhibitor_frame" } },
+    { "apply": { "model": "biding-piece:block/auction_exhibitor_glass" } }
+  ]
 }
-

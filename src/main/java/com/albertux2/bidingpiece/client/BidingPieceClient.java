@@ -1,5 +1,6 @@
-package com.albertux2.bidingpiece;
+package com.albertux2.bidingpiece.client;
 
+import com.albertux2.bidingpiece.BidingPiece;
 import com.albertux2.bidingpiece.registry.ModBlocks;
 import com.albertux2.bidingpiece.registry.ModEntities;
 import com.albertux2.bidingpiece.renderer.EmptyRenderer;

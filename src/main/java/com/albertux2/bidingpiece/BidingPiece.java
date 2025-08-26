@@ -3,6 +3,7 @@ package com.albertux2.bidingpiece;
 import com.albertux2.bidingpiece.registry.ModBlocks;
 import com.albertux2.bidingpiece.registry.ModEntities;
 import com.albertux2.bidingpiece.registry.ModItems;
+import com.albertux2.bidingpiece.registry.ModTileEntities;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -23,6 +24,7 @@ public class BidingPiece {
         ModBlocks.BLOCKS.register(bus);
         ModItems.ITEMS.register(bus);
         ModEntities.ENTITIES.register(bus);
+        ModTileEntities.TILE_ENTITIES.register(bus);
 
     }
 }

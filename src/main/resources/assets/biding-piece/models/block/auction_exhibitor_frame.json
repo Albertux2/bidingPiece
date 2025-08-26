@@ -1,0 +1,62 @@
+{
+  "credit": "Blockbench",
+  "textures": {
+    "0": "biding-piece:block/auction_exhibitor",
+    "particle": "biding-piece:block/auction_exhibitor"
+  },
+  "elements": [
+    {
+      "name": "base-top",
+      "from": [0.8, 8.8, 0.6],
+      "to": [15.2, 9.3, 15.4],
+      "faces": {
+        "north": {"uv": [0, 0, 3.5, 3], "texture": "#0"},
+        "east":  {"uv": [0, 0, 3.5, 3], "texture": "#0"},
+        "south": {"uv": [0, 0, 3.5, 3], "texture": "#0"},
+        "west":  {"uv": [0, 0, 3.5, 3], "texture": "#0"},
+        "up":    {"uv": [0, 0, 3.5, 3], "texture": "#0"},
+        "down":  {"uv": [0, 0, 3.5, 3], "texture": "#0"}
+      }
+    },
+    {
+      "name": "cushion",
+      "from": [1.31, 9.61, 1.51],
+      "to":   [14.79, 12.19, 14.49],
+      "faces": {
+        "north": {"uv": [8, 8, 16, 16], "texture": "#0"},
+        "east":  {"uv": [8, 8, 16, 16], "texture": "#0"},
+        "south": {"uv": [8, 8, 16, 16], "texture": "#0"},
+        "west":  {"uv": [8, 8, 16, 16], "texture": "#0"},
+        "up":    {"uv": [8, 8, 16, 16], "texture": "#0"},
+        "down":  {"uv": [8, 8, 16, 16], "texture": "#0"}
+      }
+    },
+    {
+      "name": "leg",
+      "from": [4.75, 0.3, 5.7],
+      "to":   [11.25, 9.2, 10.3],
+      "faces": {
+        "north": {"uv": [0, 4.5, 1.5, 6], "texture": "#0"},
+        "east":  {"uv": [0, 4.5, 1.5, 6], "texture": "#0"},
+        "south": {"uv": [0, 4.5, 1.5, 6], "texture": "#0"},
+        "west":  {"uv": [0, 4.5, 1.5, 6], "texture": "#0"},
+        "up":    {"uv": [0, 4.5, 1.5, 6], "texture": "#0"},
+        "down":  {"uv": [0, 4.5, 1.5, 6], "texture": "#0"}
+      }
+    },
+    {
+      "name": "base-bot",
+      "from": [0, 0, 0],
+      "to":   [16, 0.3, 16],
+      "faces": {
+        "north": {"uv": [0, 0, 4, 0.15], "texture": "#0"},
+        "east":  {"uv": [0, 0, 3.5, 3],  "texture": "#0"},
+        "south": {"uv": [0, 0, 3.5, 3],  "texture": "#0"},
+        "west":  {"uv": [0, 0, 3.5, 3],  "texture": "#0"},
+        "up":    {"uv": [0, 0, 3.5, 3],  "texture": "#0"},
+        "down":  {"uv": [0, 0, 3.5, 3],  "texture": "#0"}
+      }
+    }
+  ],
+  "render_type": "solid"
+}

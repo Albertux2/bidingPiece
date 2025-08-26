@@ -20,6 +20,6 @@ public class ModBlocks {
     public static final RegistryObject<Block> AUCTION_EXHIBITOR = BLOCKS.register("auction_exhibitor", AuctionExhibitor::new);
 
     public static void renderLayer() {
-        RenderTypeLookup.setRenderLayer(ModBlocks.AUCTION_EXHIBITOR.get(), RenderType.solid());
+        RenderTypeLookup.setRenderLayer(ModBlocks.AUCTION_EXHIBITOR.get(), RenderType.cutout());
     }
 }
