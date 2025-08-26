@@ -17,9 +17,12 @@ import net.minecraft.util.math.shapes.ISelectionContext;
 import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.util.math.shapes.VoxelShapes;
 import net.minecraft.world.IBlockReader;
+import net.minecraft.world.IWorldReader;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
 import java.util.Objects;
+import java.util.Random;
 
 public class AuctionExhibitor extends Block {
 
@@ -89,9 +92,20 @@ public class AuctionExhibitor extends Block {
                 if (result != null) return result;
             }
         }
-        return ActionResultType.CONSUME;
+        return ActionResultType.SUCCESS;
     }
 
+    @Override
+    public void tick(BlockState p_225534_1_, ServerWorld p_225534_2_, BlockPos p_225534_3_, Random p_225534_4_) {
+        TileEntity te = p_225534_2_.getBlockEntity(p_225534_3_);
+        if (te instanceof AuctionExhibitorTileEntity) {
+            AuctionExhibitorTileEntity exhibitor = (AuctionExhibitorTileEntity) te;
+            if (!exhibitor.getDisplayedItem().isEmpty()) {
+                Messager.messageToPlayer(p_225534_2_.getRandomPlayer().inventory.player, "Count of displayed item: " + exhibitor.getDisplayedItem().getCount());
+            }
+        }
+        super.tick(p_225534_1_, p_225534_2_, p_225534_3_, p_225534_4_);
+    }
 
     private static ActionResultType handleExhibitorItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor,
         ItemStack held) {
@@ -120,17 +134,16 @@ public class AuctionExhibitor extends Block {
     private static ActionResultType addItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor,
         ItemStack held) {
         ItemStack copy = held.copy();
-        int amount = player.isShiftKeyDown() ? held.getCount() : 1;
+        int amount = held.getCount();
 
         int total = amount + exhibitor.getDisplayedItem().getCount();
         if (total > held.getMaxStackSize()) {
-            copy.setCount(amount);
+            copy.setCount(held.getMaxStackSize());
             exhibitor.setDisplayedItem(copy);
             if (!player.isCreative()) {
-                held.shrink(total - held.getMaxStackSize());
+                held.shrink(Math.abs(total - held.getMaxStackSize() - amount));
             }
 
-            Messager.messageToPlayer(player, "Removed items from player : " + (total - held.getMaxStackSize()) + " to fit max stack size.");
             return ActionResultType.SUCCESS;
         }
 
@@ -139,7 +152,28 @@ public class AuctionExhibitor extends Block {
         if (!player.isCreative()) {
             held.shrink(amount);
         }
-        Messager.messageToPlayer(player, "Current amount in exhibitor: " + total);
         return ActionResultType.SUCCESS;
+    }
+
+    @Override
+    public void onRemove(BlockState state, World world, BlockPos pos, BlockState newState,
+        boolean isMoving) {
+        if (world.isClientSide) {
+            super.onRemove(state, world, pos, newState, isMoving);
+            return;
+        }
+
+        TileEntity te = world.getBlockEntity(pos);
+        if (te instanceof AuctionExhibitorTileEntity) {
+            AuctionExhibitorTileEntity exhibitor = (AuctionExhibitorTileEntity) te;
+            ItemStack displayed = exhibitor.getDisplayedItem();
+            if (!displayed.isEmpty()) {
+                Block.popResource(world, pos, displayed);
+                exhibitor.setDisplayedItem(ItemStack.EMPTY);
+            }
+            world.updateNeighbourForOutputSignal(pos, this);
+        }
+
+        super.onRemove(state, world, pos, newState, isMoving);
     }
 }
