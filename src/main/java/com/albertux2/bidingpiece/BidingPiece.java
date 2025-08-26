@@ -1,6 +1,7 @@
 package com.albertux2.bidingpiece;
 
 import com.albertux2.bidingpiece.block.BidingChair;
+import com.albertux2.bidingpiece.registry.ModBlocks;
 import com.albertux2.bidingpiece.registry.ModEntities;
 import com.albertux2.bidingpiece.registry.ModItems;
 import net.minecraft.block.Block;
@@ -19,16 +20,12 @@ public class BidingPiece {
 
     public static final String MOD_ID = "biding-piece";
 
-    private static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MOD_ID);
-
-    public static final RegistryObject<Block> CHAIR = BLOCKS.register("biding_chair", BidingChair::new);
-
     private static final Logger LOGGER = LogManager.getLogger();
 
     public BidingPiece() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         MinecraftForge.EVENT_BUS.register(this);
-        BLOCKS.register(bus);
+        ModBlocks.BLOCKS.register(bus);
         ModItems.ITEMS.register(bus);
         ModEntities.ENTITIES.register(bus);
 

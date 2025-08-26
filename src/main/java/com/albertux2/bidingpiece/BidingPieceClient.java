@@ -1,5 +1,6 @@
 package com.albertux2.bidingpiece;
 
+import com.albertux2.bidingpiece.registry.ModBlocks;
 import com.albertux2.bidingpiece.registry.ModEntities;
 import com.albertux2.bidingpiece.renderer.EmptyRenderer;
 import net.minecraftforge.api.distmarker.Dist;
@@ -14,6 +15,7 @@ public class BidingPieceClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent e) {
         RenderingRegistry.registerEntityRenderingHandler(ModEntities.SEAT.get(), EmptyRenderer::new);
+        ModBlocks.renderLayer();
     }
 }
 
