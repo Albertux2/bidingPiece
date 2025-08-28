@@ -21,4 +21,7 @@ public class ModItems {
 
     public static final RegistryObject<Item> AUCTION_EXHIBITOR = ITEMS.register("auction_exhibitor",
         () -> new BlockItem(ModBlocks.AUCTION_EXHIBITOR.get(), new Item.Properties().tab(ItemGroup.TAB_DECORATIONS)));
+
+    public static final RegistryObject<Item> AUCTION_PODIUM = ITEMS.register("auction_podium",
+        () -> new BlockItem(ModBlocks.AUCTION_PODIUM.get(), new Item.Properties().tab(ItemGroup.TAB_DECORATIONS)));
 }

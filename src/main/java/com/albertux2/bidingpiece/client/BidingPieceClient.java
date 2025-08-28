@@ -2,11 +2,13 @@ package com.albertux2.bidingpiece.client;
 
 import com.albertux2.bidingpiece.BidingPiece;
 import com.albertux2.bidingpiece.client.renderer.AuctionExhibitorRenderer;
+import com.albertux2.bidingpiece.client.renderer.AuctionPodiumDebugRenderer;
 import com.albertux2.bidingpiece.registry.ModBlocks;
 import com.albertux2.bidingpiece.registry.ModEntities;
 import com.albertux2.bidingpiece.registry.ModTileEntities;
 import com.albertux2.bidingpiece.renderer.EmptyRenderer;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
@@ -16,6 +18,10 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 @Mod.EventBusSubscriber(modid = BidingPiece.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class BidingPieceClient {
 
+    static {
+        MinecraftForge.EVENT_BUS.register(AuctionPodiumDebugRenderer.class);
+    }
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent e) {
         RenderingRegistry.registerEntityRenderingHandler(ModEntities.SEAT.get(), EmptyRenderer::new);
@@ -23,4 +29,3 @@ public class BidingPieceClient {
         ClientRegistry.bindTileEntityRenderer(ModTileEntities.AUCTION_EXHIBITOR.get(), AuctionExhibitorRenderer::new);
     }
 }
-

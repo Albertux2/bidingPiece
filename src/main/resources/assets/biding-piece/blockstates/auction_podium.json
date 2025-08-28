@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "biding-piece:block/auction_podium" },
+    "facing=east":  { "model": "biding-piece:block/auction_podium", "y": 90 },
+    "facing=south": { "model": "biding-piece:block/auction_podium", "y": 180 },
+    "facing=west":  { "model": "biding-piece:block/auction_podium", "y": 270 }
+  }
+}

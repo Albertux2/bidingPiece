@@ -1,6 +1,7 @@
 package com.albertux2.bidingpiece.registry;
 
 import com.albertux2.bidingpiece.block.AuctionExhibitor;
+import com.albertux2.bidingpiece.block.AuctionPodium;
 import com.albertux2.bidingpiece.block.BidingChair;
 import net.minecraft.block.Block;
 import net.minecraft.client.renderer.RenderType;
@@ -18,6 +19,9 @@ public class ModBlocks {
     public static final RegistryObject<Block> CHAIR = BLOCKS.register("biding_chair", BidingChair::new);
 
     public static final RegistryObject<Block> AUCTION_EXHIBITOR = BLOCKS.register("auction_exhibitor", AuctionExhibitor::new);
+
+    public static final RegistryObject<Block> AUCTION_PODIUM = BLOCKS.register("auction_podium",
+        AuctionPodium::new);
 
     public static void renderLayer() {
         RenderTypeLookup.setRenderLayer(ModBlocks.AUCTION_EXHIBITOR.get(), RenderType.cutout());
