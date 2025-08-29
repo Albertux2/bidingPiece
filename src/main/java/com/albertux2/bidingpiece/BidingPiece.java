@@ -1,6 +1,8 @@
 package com.albertux2.bidingpiece;
 
+import com.albertux2.bidingpiece.network.NetworkHandler;
 import com.albertux2.bidingpiece.registry.ModBlocks;
+import com.albertux2.bidingpiece.registry.ModContainers;
 import com.albertux2.bidingpiece.registry.ModEntities;
 import com.albertux2.bidingpiece.registry.ModItems;
 import com.albertux2.bidingpiece.registry.ModTileEntities;
@@ -25,6 +27,8 @@ public class BidingPiece {
         ModItems.ITEMS.register(bus);
         ModEntities.ENTITIES.register(bus);
         ModTileEntities.TILE_ENTITIES.register(bus);
+        ModContainers.CONTAINERS.register(bus); // Registrando los containers
 
+        NetworkHandler.init();
     }
 }

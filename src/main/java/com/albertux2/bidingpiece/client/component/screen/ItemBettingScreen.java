@@ -13,7 +13,10 @@ import net.minecraft.util.NonNullList;
 import net.minecraft.util.text.StringTextComponent;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ItemBettingScreen extends Screen {
@@ -24,28 +27,35 @@ public class ItemBettingScreen extends Screen {
     private final Screen parent;
     private final PlayerEntity player;
     private final List<BetItem> betItems = new ArrayList<>();
-
+    private final List<ItemStack> flatInventory;
     private TextFieldWidget quantityField;
     private FancyButton addBtn;
     private FancyButton backBtn;
     private FancyButton submitBtn;
-
     private ItemStack selectedStack = ItemStack.EMPTY;
     private int scrollOffsetInv = 0;
     private int scrollOffsetList = 0;
-    private final List<ItemStack> flatInventory;
-
     private String errorMessage;
 
     private int gridStartX, gridStartY, itemsPerRow, maxRows, cellSize, cellPad, cellPitch;
     private int listStartY, listVisibleCount, listItemHeight;
     private int bottomPanelH, bottomPanelPad;
 
+    private SelectedListComponent selectedListComponent;
+
     public ItemBettingScreen(Screen parent) {
         super(new StringTextComponent("Item Betting"));
         this.parent = parent;
         this.player = Minecraft.getInstance().player;
         this.flatInventory = flattenInventory(this.player);
+    }
+
+    private static boolean hit(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    }
+
+    private static int clamp(int v, int min, int max) {
+        return Math.max(min, Math.min(max, v));
     }
 
     @Override
@@ -58,6 +68,8 @@ public class ItemBettingScreen extends Screen {
         this.children.add(quantityField);
 
         renderButtons();
+
+        selectedListComponent = new SelectedListComponent(betItems, this.font, true);
     }
 
     private void renderButtons() {
@@ -188,7 +200,9 @@ public class ItemBettingScreen extends Screen {
         layoutBottomRow(ms, panelTop);
 
         renderInventory(ms, mouseX, mouseY);
-        renderSelectedList(ms, mouseX, mouseY);
+
+        selectedListComponent.setLayout(this.width, listStartY, listItemHeight, PAD_L, PAD_R, uiScale(), visibleListSlots());
+        selectedListComponent.render(ms);
 
         super.render(ms, mouseX, mouseY, partialTicks);
         quantityField.render(ms, mouseX, mouseY, partialTicks);
@@ -271,57 +285,6 @@ public class ItemBettingScreen extends Screen {
         }
     }
 
-    private void renderSelectedList(MatrixStack ms, int mouseX, int mouseY) {
-        int visible = visibleListSlots();
-
-        for (int i = 0; i < visible; i++) {
-            int idx = i + scrollOffsetList;
-            int y = listStartY + i * listItemHeight;
-
-            fill(ms, PAD_L, y, this.width - PAD_R, y + listItemHeight, 0xFF333333);
-
-            if (idx < betItems.size()) {
-                BetItem item = betItems.get(idx);
-
-                int iconX = PAD_L + 5;
-                int iconY = y + (listItemHeight - 16) / 2;
-                Minecraft.getInstance().getItemRenderer().renderGuiItem(item.stack, iconX, iconY);
-
-                int textY = y + (listItemHeight - this.font.lineHeight) / 2;
-                String name = item.stack.getHoverName().getString();
-                String quantity = " x" + item.quantity;
-
-                int nameX = PAD_L + 30;
-                this.font.draw(ms, name, nameX, textY, 0xFFFFFF);
-
-                int deleteX = this.width - PAD_R - (int) Math.round(60 * uiScale());
-                int delH = listItemHeight - 6;
-                int delW = delH;
-                int qtyX = deleteX - (int) Math.round(16 * uiScale()) - this.font.width(quantity);
-
-                this.font.draw(ms, quantity, qtyX, textY, 0xFFFFFF);
-
-                int delY = y + (listItemHeight - delH) / 2;
-                fill(ms, deleteX, delY, deleteX + delW, delY + delH, 0xFFCC4444);
-                this.font.draw(ms, "×", deleteX + delW / 2 - 3, delY + delH / 2 - this.font.lineHeight / 2, 0xFFFFFF);
-
-                if (hit(mouseX, mouseY, deleteX, delY, delW, delH)) {
-                    fill(ms, deleteX, delY, deleteX + delW, delY + delH, 0xFFFF6666);
-                }
-            } else {
-                int textY = y + (listItemHeight - this.font.lineHeight) / 2;
-                this.font.draw(ms, "-", PAD_L + 30, textY, 0x88FFFFFF);
-            }
-        }
-
-        if (betItems.size() > visible) {
-            int barX = this.width - PAD_R - SCROLLBAR_W;
-            int barY = listStartY;
-            int barH = visible * listItemHeight;
-            drawScrollbar(ms, barX, barY, barH, betItems.size(), visible, scrollOffsetList);
-        }
-    }
-
     private void drawScrollbar(MatrixStack ms, int x, int y, int h, int total, int visible, int offset) {
         fill(ms, x, y, x + SCROLLBAR_W, y + h, 0xFF202020);
         int thumbH = Math.max(20, (int) (h * (visible / (float) total)));
@@ -348,24 +311,9 @@ public class ItemBettingScreen extends Screen {
             }
         }
 
-        int visible = visibleListSlots();
-        for (int i = 0; i < visible; i++) {
-            int idx = i + scrollOffsetList;
-            if (idx >= betItems.size()) continue;
-
-            int y = listStartY + i * listItemHeight;
-            int deleteX = this.width - PAD_R - (int) Math.round(60 * uiScale());
-            int delH = listItemHeight - 6;
-            int delW = delH;
-            int delY = y + (listItemHeight - delH) / 2;
-
-            if (hit(mouseX, mouseY, deleteX, delY, delW, delH)) {
-                betItems.remove(idx);
-                int maxScroll = Math.max(0, betItems.size() - visible);
-                scrollOffsetList = Math.min(scrollOffsetList, maxScroll);
-                relayout();
-                return true;
-            }
+        if (selectedListComponent.clicked(mouseX, mouseY)) {
+            relayout();
+            return true;
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
@@ -383,9 +331,9 @@ public class ItemBettingScreen extends Screen {
         int panelTop = this.height - bottomPanelH;
         int listBottom = panelTop - bottomPanelPad;
         if (mouseY >= listStartY && mouseY <= listBottom) {
-            int visible = visibleListSlots();
-            int maxScroll = Math.max(0, betItems.size() - visible);
-            scrollOffsetList = clamp(scrollOffsetList - (int) Math.signum(delta), 0, maxScroll);
+            if (selectedListComponent.mouseScrolled(mouseX, mouseY, delta)) {
+                return true;
+            }
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, delta);
@@ -407,28 +355,5 @@ public class ItemBettingScreen extends Screen {
         Map<String, BetItem> flattened = new HashMap<>();
         items.stream().filter(i -> !i.isEmpty()).forEach(x -> flattened.computeIfAbsent(x.getItem().getDescriptionId(), s -> new BetItem(x, 0)).sumQuantity(x.getCount()));
         return flattened.values().stream().map(x -> new ItemStack(x.stack.getItem(), x.quantity)).collect(Collectors.toList());
-    }
-
-    private static boolean hit(double mx, double my, int x, int y, int w, int h) {
-        return mx >= x && mx <= x + w && my >= y && my <= y + h;
-    }
-
-    private static int clamp(int v, int min, int max) {
-        return Math.max(min, Math.min(max, v));
-    }
-
-    private static class BetItem {
-        public final ItemStack stack;
-        public int quantity;
-
-        public BetItem(ItemStack stack, int quantity) {
-            this.stack = stack;
-            this.quantity = quantity;
-        }
-
-        public BetItem sumQuantity(int plus) {
-            this.quantity += plus;
-            return this;
-        }
     }
 }

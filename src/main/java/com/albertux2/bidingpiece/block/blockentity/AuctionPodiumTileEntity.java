@@ -1,15 +1,22 @@
 package com.albertux2.bidingpiece.block.blockentity;
 
+import com.albertux2.bidingpiece.network.NetworkHandler;
+import com.albertux2.bidingpiece.network.UpdateExhibitedItemsPacket;
 import com.albertux2.bidingpiece.registry.ModTileEntities;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.fml.network.PacketDistributor;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class AuctionPodiumTileEntity extends TileEntity {
     private List<BlockPos> nearbyExhibitors = new ArrayList<>();
@@ -67,5 +74,39 @@ public class AuctionPodiumTileEntity extends TileEntity {
         });
 
         return nearbyExhibitors;
+    }
+
+    public List<ItemStack> getExhibitedItems(BlockState state) {
+        if (level == null) return new ArrayList<>();
+        return scanForExhibitors(state)
+            .stream()
+            .map(level::getBlockEntity)
+            .filter(e -> e instanceof AuctionExhibitorTileEntity)
+            .map(e -> ((AuctionExhibitorTileEntity) e).getDisplayedItem())
+            .filter(i -> Objects.nonNull(i) && !i.isEmpty())
+            .collect(Collectors.toList());
+    }
+
+    public void sendItemsToClient(ServerPlayerEntity player) {
+        if (level != null && !level.isClientSide) {
+            List<ItemStack> items = getExhibitedItems(getBlockState());
+            NetworkHandler.INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new UpdateExhibitedItemsPacket(items)
+            );
+        }
+    }
+
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        if (level != null && !level.isClientSide) {
+            // Actualizar a todos los jugadores que tengan abierto el contenedor
+            level.players().forEach(player -> {
+                if (player instanceof ServerPlayerEntity && player.containerMenu instanceof com.albertux2.bidingpiece.container.AuctionContainer) {
+                    sendItemsToClient((ServerPlayerEntity) player);
+                }
+            });
+        }
     }
 }
