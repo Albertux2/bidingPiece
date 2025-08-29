@@ -23,5 +23,21 @@ public class NetworkHandler {
             UpdateExhibitedItemsPacket::decode,
             UpdateExhibitedItemsPacket::handle
         );
+
+        INSTANCE.registerMessage(
+            id++,
+            ToggleAuctionMessage.class,
+            ToggleAuctionMessage::encode,
+            ToggleAuctionMessage::decode,
+            ToggleAuctionMessage::handle
+        );
+
+        INSTANCE.registerMessage(
+            id++,
+            UpdateAuctionStatePacket.class,
+            UpdateAuctionStatePacket::encode,
+            UpdateAuctionStatePacket::decode,
+            UpdateAuctionStatePacket::handle
+        );
     }
 }

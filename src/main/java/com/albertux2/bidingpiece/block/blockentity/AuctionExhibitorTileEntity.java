@@ -8,9 +8,12 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SUpdateTileEntityPacket;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityType;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class AuctionExhibitorTileEntity extends TileEntity {
 
+    private static final Logger LOGGER = LogManager.getLogger();
     private ItemStack displayedItem = ItemStack.EMPTY;
 
     public AuctionExhibitorTileEntity(TileEntityType<?> type) {
@@ -22,11 +25,11 @@ public class AuctionExhibitorTileEntity extends TileEntity {
     }
 
     public ItemStack getDisplayedItem() {
-        return displayedItem;
+        return displayedItem.copy();
     }
 
     public void setDisplayedItem(ItemStack stack) {
-        this.displayedItem = stack;
+        this.displayedItem = stack.copy();
         setChanged();
         if (this.level != null && !this.level.isClientSide) {
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);

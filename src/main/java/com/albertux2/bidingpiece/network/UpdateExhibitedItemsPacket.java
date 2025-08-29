@@ -9,30 +9,44 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.fml.network.NetworkEvent;
 import net.minecraftforge.fml.network.PacketDistributor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
 public class UpdateExhibitedItemsPacket {
+    private static final Logger LOGGER = LogManager.getLogger();
     private final List<ItemStack> items;
-
-    public UpdateExhibitedItemsPacket(List<ItemStack> items) {
-        this.items = items;
-    }
+    private final boolean isRequest;
 
     public UpdateExhibitedItemsPacket() {
         this.items = new ArrayList<>();
+        this.isRequest = true;
+    }
+
+    public UpdateExhibitedItemsPacket(List<ItemStack> items) {
+        this.items = new ArrayList<>(items);
+        this.isRequest = false;
     }
 
     public static void encode(UpdateExhibitedItemsPacket msg, PacketBuffer buf) {
-        buf.writeInt(msg.items.size());
-        for (ItemStack stack : msg.items) {
-            buf.writeItemStack(stack, false);
+        buf.writeBoolean(msg.isRequest);
+        if (!msg.isRequest) {
+            buf.writeInt(msg.items.size());
+            for (ItemStack stack : msg.items) {
+                buf.writeItemStack(stack, false);
+            }
         }
     }
 
     public static UpdateExhibitedItemsPacket decode(PacketBuffer buf) {
+        boolean isRequest = buf.readBoolean();
+        if (isRequest) {
+            return new UpdateExhibitedItemsPacket();
+        }
+
         int size = buf.readInt();
         List<ItemStack> items = new ArrayList<>();
         for (int i = 0; i < size; i++) {
@@ -43,22 +57,28 @@ public class UpdateExhibitedItemsPacket {
 
     public static void handle(UpdateExhibitedItemsPacket msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            if (ctx.get().getDirection().getReceptionSide().isClient()) {
-                // Estamos en el cliente, actualizar la GUI
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.screen instanceof AuctionScreen) {
-                    ((AuctionScreen) mc.screen).updateExhibitedItems(msg.items);
+            NetworkEvent.Context context = ctx.get();
+            if (context.getDirection().getReceptionSide().isClient()) {
+                // El cliente recibe la respuesta con los items
+                if (!msg.isRequest) {
+                    Minecraft mc = Minecraft.getInstance();
+                    if (mc.screen instanceof AuctionScreen) {
+                        ((AuctionScreen) mc.screen).updateExhibitedItems(msg.items);
+                    }
                 }
             } else {
-                // Estamos en el servidor, enviar items al cliente
-                PlayerEntity player = ctx.get().getSender();
-                if (player != null && player.containerMenu instanceof AuctionContainer) {
-                    AuctionContainer container = (AuctionContainer) player.containerMenu;
-                    List<ItemStack> items = container.getExhibitedItems();
-                    NetworkHandler.INSTANCE.send(
-                        PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
-                        new UpdateExhibitedItemsPacket(items)
-                    );
+                if (msg.isRequest) {
+                    PlayerEntity player = context.getSender();
+                    if (player instanceof ServerPlayerEntity &&
+                        player.containerMenu instanceof AuctionContainer) {
+                        AuctionContainer container = (AuctionContainer) player.containerMenu;
+                        List<ItemStack> items = container.getExhibitedItems();
+
+                        NetworkHandler.INSTANCE.send(
+                            PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
+                            new UpdateExhibitedItemsPacket(items)
+                        );
+                    }
                 }
             }
         });

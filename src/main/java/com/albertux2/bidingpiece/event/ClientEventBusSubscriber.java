@@ -14,8 +14,6 @@ public class ClientEventBusSubscriber {
 
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            ScreenManager.register(ModContainers.AUCTION_CONTAINER.get(), AuctionScreen::new);
-        });
+        event.enqueueWork(() -> ScreenManager.register(ModContainers.AUCTION_CONTAINER.get(), AuctionScreen::new));
     }
 }
