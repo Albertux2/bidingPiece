@@ -3,6 +3,7 @@ package com.albertux2.bidingpiece.messaging;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
@@ -20,6 +21,14 @@ public final class Messager {
 
     public static void messageToPlayer(PlayerEntity player, String message) {
         player.displayClientMessage(new StringTextComponent(message), true);
+    }
+
+    public static void broadcastMessage(World world, String message) {
+        world.players().forEach(p -> p.sendMessage(new StringTextComponent(message), p.getUUID()));
+    }
+
+    public static void broadcastMessage(World world, ITextComponent message) {
+        world.players().forEach(p -> p.sendMessage(message, p.getUUID()));
     }
 
     public static void debugMessage(World world, String message) {

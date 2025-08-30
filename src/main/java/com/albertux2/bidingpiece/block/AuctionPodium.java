@@ -2,12 +2,14 @@ package com.albertux2.bidingpiece.block;
 
 import com.albertux2.bidingpiece.block.blockentity.AuctionPodiumTileEntity;
 import com.albertux2.bidingpiece.container.AuctionContainer;
+import com.albertux2.bidingpiece.messaging.Messager;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.HorizontalBlock;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.inventory.container.Container;
 import net.minecraft.inventory.container.INamedContainerProvider;
 import net.minecraft.item.BlockItemUseContext;
@@ -22,7 +24,6 @@ import net.minecraft.util.math.BlockRayTraceResult;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.World;
-import net.minecraftforge.common.ToolType;
 import net.minecraftforge.fml.network.NetworkHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +34,9 @@ public class AuctionPodium extends HorizontalBlock {
     private static final Logger LOGGER = LogManager.getLogger();
 
     public AuctionPodium() {
-        super(Properties.of(net.minecraft.block.material.Material.WOOD).strength(2.0f).harvestTool(ToolType.AXE).noOcclusion());
+        super(Properties.of(net.minecraft.block.material.Material.METAL)
+            .strength(2.0f)
+            .noOcclusion());
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
@@ -64,25 +67,32 @@ public class AuctionPodium extends HorizontalBlock {
             TileEntity te = world.getBlockEntity(pos);
             if (te instanceof AuctionPodiumTileEntity && player instanceof ServerPlayerEntity) {
                 AuctionPodiumTileEntity podiumTE = (AuctionPodiumTileEntity) te;
+                if (podiumTE.getCurrentAuction() != null && !player.getUUID().equals(podiumTE.getCurrentAuction().getAuctioneer())) {
+                    Messager.messageToPlayer(player,
+                        String.format("There is an active auction. Only the auctioneer (%s) can manage it.",
+                            world.getPlayerByUUID(podiumTE.getCurrentAuction().getAuctioneer()).getName().getString()));
+                    return ActionResultType.SUCCESS;
+                }
                 ServerPlayerEntity serverPlayer = (ServerPlayerEntity) player;
 
-                // Escanear exhibidores y obtener sus items
-                List<BlockPos> foundExhibitors = podiumTE.scanForExhibitors(state);
-
+                podiumTE.scanForExhibitors(state);
                 List<ItemStack> exhibitedItems = podiumTE.getExhibitedItems();
+                if (exhibitedItems.isEmpty()) {
+                    Messager.messageToPlayer(player, "There are no items to auction in the nearby exhibitors.");
+                    return ActionResultType.SUCCESS;
+                }
 
                 NetworkHooks.openGui(serverPlayer, new INamedContainerProvider() {
                     @Override
                     public Container createMenu(int windowId, PlayerInventory inv, PlayerEntity player) {
                         AuctionContainer container = new AuctionContainer(windowId, inv, podiumTE);
-                        // Asegurarnos de que el contenedor tenga los items actualizados
                         container.updateClientItems(exhibitedItems);
                         return container;
                     }
 
                     @Override
                     public ITextComponent getDisplayName() {
-                        return new StringTextComponent("Podium Items");
+                        return new StringTextComponent("");
                     }
                 }, buf -> {
                     buf.writeBlockPos(pos);
@@ -107,5 +117,50 @@ public class AuctionPodium extends HorizontalBlock {
             }
         }
         super.onPlace(state, world, pos, oldState, isMoving);
+    }
+
+    @Override
+    public void playerWillDestroy(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+        if (!world.isClientSide) {
+            TileEntity te = world.getBlockEntity(pos);
+            if (te instanceof AuctionPodiumTileEntity) {
+                AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
+                if (podium.getCurrentAuction() != null && podium.getCurrentAuction().isActive()) {
+                    world.setBlock(pos, state, 3);
+                    Messager.messageToPlayer(player, "No puedes destruir el podium mientras hay una subasta activa");
+                    return;
+                }
+                super.playerWillDestroy(world, pos, state, player);
+            }
+        }
+    }
+
+    @Override
+    public boolean removedByPlayer(BlockState state, World world, BlockPos pos, PlayerEntity player,
+        boolean willHarvest, FluidState fluid) {
+        if (!world.isClientSide) {
+            TileEntity te = world.getBlockEntity(pos);
+            if (te instanceof AuctionPodiumTileEntity) {
+                AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
+                if (podium.getCurrentAuction() != null && podium.getCurrentAuction().isActive()) {
+                    Messager.messageToPlayer(player, "No puedes destruir un podium mientras hay una subasta activa");
+                    return false;
+                }
+            }
+        }
+        return super.removedByPlayer(state, world, pos, player, willHarvest, fluid);
+    }
+
+    @Override
+    public float getExplosionResistance(BlockState state, net.minecraft.world.IBlockReader world, BlockPos pos,
+        net.minecraft.world.Explosion explosion) {
+        TileEntity te = world.getBlockEntity(pos);
+        if (te instanceof AuctionPodiumTileEntity) {
+            AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
+            if (podium.getCurrentAuction() != null && podium.getCurrentAuction().isActive()) {
+                return 3600000.0F;
+            }
+        }
+        return super.getExplosionResistance(state, world, pos, explosion);
     }
 }

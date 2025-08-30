@@ -1,11 +1,13 @@
 package com.albertux2.bidingpiece.block;
 
 import com.albertux2.bidingpiece.block.blockentity.AuctionExhibitorTileEntity;
+import com.albertux2.bidingpiece.block.blockentity.AuctionPodiumTileEntity;
 import com.albertux2.bidingpiece.messaging.Messager;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.item.BlockItemUseContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
@@ -17,11 +19,9 @@ import net.minecraft.util.math.shapes.ISelectionContext;
 import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.util.math.shapes.VoxelShapes;
 import net.minecraft.world.IBlockReader;
-import net.minecraft.world.IWorldReader;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 
-import java.util.Objects;
 import java.util.Random;
 
 public class AuctionExhibitor extends Block {
@@ -30,9 +30,57 @@ public class AuctionExhibitor extends Block {
 
     public AuctionExhibitor() {
         super(Block.Properties
-            .of(Material.PISTON)
+            .of(Material.METAL)
             .strength(2.0f)
             .noOcclusion());
+    }
+
+    private static ActionResultType handleExhibitorItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor,
+        ItemStack held) {
+        if (!held.isEmpty() && canAddItem(exhibitor, held)) {
+            return addItem(player, exhibitor, held);
+        } else if (!exhibitor.getDisplayedItem().isEmpty() && held.isEmpty()) {
+            return removeItem(player, exhibitor);
+        }
+        return null;
+    }
+
+    private static boolean canAddItem(AuctionExhibitorTileEntity exhibitor, ItemStack held) {
+        ItemStack displayed = exhibitor.getDisplayedItem();
+        return displayed.isEmpty() || (held.getDescriptionId().equals(displayed.getDescriptionId()) && displayed.getMaxStackSize() > 1 && displayed.getCount() < displayed.getMaxStackSize());
+    }
+
+    private static ActionResultType removeItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor) {
+        player.addItem(exhibitor.getDisplayedItem());
+        exhibitor.setDisplayedItem(ItemStack.EMPTY);
+        return ActionResultType.SUCCESS;
+    }
+
+    private static ActionResultType addItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor, ItemStack held) {
+        ItemStack copy = held.copy();
+        int amount = held.getCount();
+
+        int total = amount + exhibitor.getDisplayedItem().getCount();
+        if (total > held.getMaxStackSize()) {
+            copy.setCount(held.getMaxStackSize());
+            exhibitor.setDisplayedItem(copy);
+            if (!player.isCreative()) {
+                held.shrink(Math.abs(total - held.getMaxStackSize() - amount));
+            }
+
+            return ActionResultType.SUCCESS;
+        }
+
+        copy.setCount(total);
+        exhibitor.setDisplayedItem(copy);
+        if (!player.isCreative()) {
+            held.shrink(amount);
+        }
+        return ActionResultType.SUCCESS;
+    }
+
+    private static void unableActionMessage(PlayerEntity player) {
+        Messager.messageToPlayer(player, "No puedes interactuar con un exhibidor mientras hay una subasta activa");
     }
 
     @Override
@@ -65,7 +113,6 @@ public class AuctionExhibitor extends Block {
         return false;
     }
 
-
     @Override
     public boolean useShapeForLightOcclusion(BlockState p_220074_1_) {
         return true;
@@ -82,10 +129,21 @@ public class AuctionExhibitor extends Block {
     }
 
     @Override
-    public ActionResultType use(BlockState state, World world, BlockPos pos,
-        PlayerEntity player, Hand hand, BlockRayTraceResult hit) {
+    public ActionResultType use(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand,
+        BlockRayTraceResult hit) {
         if (!world.isClientSide) {
             TileEntity te = world.getBlockEntity(pos);
+            PodiumResult nearbyPodium = findNearbyPodium(world, pos);
+            if (nearbyPodium != null) {
+                TileEntity podiumTE = world.getBlockEntity(nearbyPodium.pos);
+                if (podiumTE instanceof AuctionPodiumTileEntity) {
+                    AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) podiumTE;
+                    if (podium.getCurrentAuction() != null && podium.getCurrentAuction().isActive()) {
+                        unableActionMessage(player);
+                        return ActionResultType.CONSUME;
+                    }
+                }
+            }
             if (te instanceof AuctionExhibitorTileEntity) {
                 AuctionExhibitorTileEntity exhibitor = (AuctionExhibitorTileEntity) te;
                 ActionResultType result = handleExhibitorItem(player, exhibitor, player.getItemInHand(hand));
@@ -107,57 +165,8 @@ public class AuctionExhibitor extends Block {
         super.tick(p_225534_1_, p_225534_2_, p_225534_3_, p_225534_4_);
     }
 
-    private static ActionResultType handleExhibitorItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor,
-        ItemStack held) {
-        if (!held.isEmpty() && canAddItem(exhibitor, held)) {
-            return addItem(player, exhibitor, held);
-        } else if (!exhibitor.getDisplayedItem().isEmpty() && held.isEmpty()) {
-            return removeItem(player, exhibitor);
-        }
-        return null;
-    }
-
-    private static boolean canAddItem(AuctionExhibitorTileEntity exhibitor, ItemStack held) {
-        ItemStack displayed = exhibitor.getDisplayedItem();
-        return displayed.isEmpty()
-            || (held.getDescriptionId().equals(displayed.getDescriptionId())
-            && displayed.getMaxStackSize() > 1
-            && displayed.getCount() < displayed.getMaxStackSize());
-    }
-
-    private static ActionResultType removeItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor) {
-        player.addItem(exhibitor.getDisplayedItem());
-        exhibitor.setDisplayedItem(ItemStack.EMPTY);
-        return ActionResultType.SUCCESS;
-    }
-
-    private static ActionResultType addItem(PlayerEntity player, AuctionExhibitorTileEntity exhibitor,
-        ItemStack held) {
-        ItemStack copy = held.copy();
-        int amount = held.getCount();
-
-        int total = amount + exhibitor.getDisplayedItem().getCount();
-        if (total > held.getMaxStackSize()) {
-            copy.setCount(held.getMaxStackSize());
-            exhibitor.setDisplayedItem(copy);
-            if (!player.isCreative()) {
-                held.shrink(Math.abs(total - held.getMaxStackSize() - amount));
-            }
-
-            return ActionResultType.SUCCESS;
-        }
-
-        copy.setCount(total);
-        exhibitor.setDisplayedItem(copy);
-        if (!player.isCreative()) {
-            held.shrink(amount);
-        }
-        return ActionResultType.SUCCESS;
-    }
-
     @Override
-    public void onRemove(BlockState state, World world, BlockPos pos, BlockState newState,
-        boolean isMoving) {
+    public void onRemove(BlockState state, World world, BlockPos pos, BlockState newState, boolean isMoving) {
         if (world.isClientSide) {
             super.onRemove(state, world, pos, newState, isMoving);
             return;
@@ -175,5 +184,103 @@ public class AuctionExhibitor extends Block {
         }
 
         super.onRemove(state, world, pos, newState, isMoving);
+    }
+
+    @Override
+    public void playerWillDestroy(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+        if (!world.isClientSide) {
+            PodiumResult nearbyPodium = findNearbyPodium(world, pos);
+            if (nearbyPodium != null) {
+                TileEntity podiumTE = world.getBlockEntity(nearbyPodium.getPos());
+                if (podiumTE instanceof AuctionPodiumTileEntity) {
+                    AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) podiumTE;
+                    if (podium.getCurrentAuction() != null && podium.getCurrentAuction().isActive()) {
+                        world.setBlock(pos, state, 3);
+                        unableActionMessage(player);
+                        return;
+                    }
+                    super.playerWillDestroy(world, pos, state, player);
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean removedByPlayer(BlockState state, World world, BlockPos pos, PlayerEntity player,
+        boolean willHarvest, FluidState fluid) {
+        if (!world.isClientSide) {
+            PodiumResult nearbyPodium = findNearbyPodium(world, pos);
+            if (nearbyPodium != null) {
+                TileEntity podiumTE = world.getBlockEntity(nearbyPodium.getPos());
+                if (podiumTE instanceof AuctionPodiumTileEntity) {
+                    AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) podiumTE;
+                    if (podium.getCurrentAuction() != null && podium.getCurrentAuction().isActive()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return super.removedByPlayer(state, world, pos, player, willHarvest, fluid);
+    }
+
+    private PodiumResult findNearbyPodium(World world, BlockPos exhibitorPos) {
+        int range = 10;
+        return BlockPos.betweenClosedStream(exhibitorPos.offset(-range, -range, -range), exhibitorPos.offset(range, range, range))
+            .filter(pos -> world.getBlockState(pos).getBlock() instanceof AuctionPodium)
+            .map(pos -> new PodiumResult((AuctionPodium) world.getBlockState(pos).getBlock(), pos.immutable()))
+            .findFirst()
+            .orElse(null);
+    }
+
+    @Override
+    public float getExplosionResistance(BlockState state, net.minecraft.world.IBlockReader world, BlockPos pos,
+        net.minecraft.world.Explosion explosion) {
+        if (world instanceof World) {
+            PodiumResult nearbyPodium = findNearbyPodium((World) world, pos);
+            if (nearbyPodium != null) {
+                TileEntity te = world.getBlockEntity(nearbyPodium.getPos());
+                if (te instanceof AuctionPodiumTileEntity) {
+                    AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
+                    if (podium.getCurrentAuction() != null && podium.getCurrentAuction().isActive()) {
+                        return 3600000.0F;
+                    }
+                }
+            }
+        }
+        return super.getExplosionResistance(state, world, pos, explosion);
+    }
+
+    @Override
+    public boolean canDropFromExplosion(BlockState state, net.minecraft.world.IBlockReader world, BlockPos pos,
+        net.minecraft.world.Explosion explosion) {
+        if (world instanceof World) {
+            PodiumResult nearbyPodium = findNearbyPodium((World) world, pos);
+            if (nearbyPodium != null) {
+                TileEntity te = world.getBlockEntity(nearbyPodium.getPos());
+                if (te instanceof AuctionPodiumTileEntity) {
+                    AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
+                    return podium.getCurrentAuction() == null || !podium.getCurrentAuction().isActive();
+                }
+            }
+        }
+        return super.canDropFromExplosion(state, world, pos, explosion);
+    }
+
+    private static class PodiumResult {
+        private final AuctionPodium podium;
+        private final BlockPos pos;
+
+        public PodiumResult(AuctionPodium podium, BlockPos pos) {
+            this.podium = podium;
+            this.pos = pos;
+        }
+
+        public AuctionPodium getPodium() {
+            return podium;
+        }
+
+        public BlockPos getPos() {
+            return pos;
+        }
     }
 }

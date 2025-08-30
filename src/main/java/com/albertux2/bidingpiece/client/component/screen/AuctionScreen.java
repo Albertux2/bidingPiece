@@ -4,7 +4,8 @@ import com.albertux2.bidingpiece.auction.Auction;
 import com.albertux2.bidingpiece.client.component.button.FancyButton;
 import com.albertux2.bidingpiece.container.AuctionContainer;
 import com.albertux2.bidingpiece.network.NetworkHandler;
-import com.albertux2.bidingpiece.network.ToggleAuctionMessage;
+import com.albertux2.bidingpiece.network.RequestAuctionStatePacket;
+import com.albertux2.bidingpiece.network.UpdateAuctionStatePacket;
 import com.albertux2.bidingpiece.network.UpdateExhibitedItemsPacket;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.Minecraft;
@@ -30,19 +31,15 @@ public class AuctionScreen extends ContainerScreen<AuctionContainer> {
 
     public AuctionScreen(AuctionContainer container, PlayerInventory inventory, ITextComponent title) {
         super(container, inventory, title);
-        requestExhibitedItems();
-    }
-
-    private void requestExhibitedItems() {
+        NetworkHandler.INSTANCE.sendToServer(new RequestAuctionStatePacket(container.getPodiumPos()));
         NetworkHandler.INSTANCE.sendToServer(new UpdateExhibitedItemsPacket());
     }
 
     @Override
     public void tick() {
         super.tick();
-        // Solicitar items periódicamente para mantener la UI actualizada
-        if (minecraft.player.tickCount % 20 == 0) { // Cada segundo
-            requestExhibitedItems();
+        if (minecraft.player.tickCount % 20 == 0) {
+            NetworkHandler.INSTANCE.sendToServer(new UpdateExhibitedItemsPacket());
         }
     }
 
@@ -77,55 +74,42 @@ public class AuctionScreen extends ContainerScreen<AuctionContainer> {
 
         selectedListComponent = new SelectedListComponent(exhibitedItems, this.font, false);
 
-        // Botón para iniciar/cancelar subasta
         toggleAuctionButton = this.addButton(new FancyButton(
             this.width / 2 - 100,
             this.height - 50,
             200, 20,
             new StringTextComponent(currentAuction != null && currentAuction.isActive() ? "Cancel Auction" : "Start Auction"),
-            button -> {
-                NetworkHandler.INSTANCE.sendToServer(new ToggleAuctionMessage(menu.getPodiumPos()));
-                if (currentAuction == null) {
-                    currentAuction = new Auction(minecraft.player.getUUID(), menu.getExhibitedItems(), true);
-                } else {
-                    currentAuction.setActive(!currentAuction.isActive());
-                }
-                updateButtonStates();
-            }
+            button -> NetworkHandler.INSTANCE.sendToServer(new UpdateAuctionStatePacket(
+                currentAuction != null && currentAuction.isActive()
+                    ? null
+                    : new Auction(minecraft.player.getUUID(), menu.getExhibitedItems(), true)
+            ))
         ));
 
-        // Botón para mostrar ofertas
         showBidsButton = this.addButton(new FancyButton(
             this.width / 2 - 100,
             this.height - 25,
             200, 20,
             new StringTextComponent("Show Bids"),
-            button -> openBidsScreen()
+            button -> {
+                if (currentAuction != null && currentAuction.isActive()) {
+                    Minecraft.getInstance().setScreen(new BidsScreen(this, currentAuction));
+                }
+            }
         ));
 
-        updateButtonStates();
+        showBidsButton.active = currentAuction != null && currentAuction.isActive();
     }
 
-    private void updateButtonStates() {
+    public void updateAuctionState(Auction auction) {
+        this.currentAuction = auction;
         if (toggleAuctionButton != null) {
-            toggleAuctionButton.setMessage(
-                new StringTextComponent(currentAuction != null && currentAuction.isActive() ? "Cancel Auction" : "Start Auction")
-            );
+            toggleAuctionButton.setMessage(new StringTextComponent(
+                currentAuction != null && currentAuction.isActive() ? "Cancel Auction" : "Start Auction"
+            ));
         }
-
         if (showBidsButton != null) {
             showBidsButton.active = currentAuction != null && currentAuction.isActive();
-        }
-    }
-
-    public void updateAuction(Auction auction) {
-        this.currentAuction = auction;
-        updateButtonStates();
-    }
-
-    private void openBidsScreen() {
-        if (currentAuction != null && currentAuction.isActive()) {
-            Minecraft.getInstance().setScreen(new BidsScreen(this, currentAuction));
         }
     }
 
@@ -148,16 +132,11 @@ public class AuctionScreen extends ContainerScreen<AuctionContainer> {
         }
 
         drawCenteredString(ms, this.font, this.title, this.width / 2, 20, 0xFFFFFF);
-
         super.render(ms, mouseX, mouseY, partialTicks);
     }
 
     @Override
-    protected void renderLabels(MatrixStack ms, int x, int y) {
-    }
-
-    @Override
-    protected void renderBg(MatrixStack ms, float partialTicks, int x, int y) {
+    protected void renderBg(MatrixStack p_230450_1_, float p_230450_2_, int p_230450_3_, int p_230450_4_) {
     }
 
     @Override

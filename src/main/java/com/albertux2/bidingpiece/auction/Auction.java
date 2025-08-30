@@ -1,60 +1,41 @@
 package com.albertux2.bidingpiece.auction;
 
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.ListNBT;
 
 import java.util.*;
 
 public class Auction {
     private final List<ItemStack> auctionedItems;
-    private final Map<UUID, List<ItemStack>> bids = new HashMap<>();
-    private UUID auctioneer;
-    private boolean isActive = false;
+    private final Map<UUID, List<ItemStack>> bids;
+    private final UUID auctioneer;
+    private boolean isActive;
 
-    public Auction(UUID auctioneer, List<ItemStack> auctionedItems, boolean isActive) {
+    public Auction(UUID auctioneer, List<ItemStack> items, boolean isActive) {
+        this.auctioneer = auctioneer;
         this.isActive = isActive;
-        this.auctioneer = auctioneer;
-        // Hacer copia profunda de los items
         this.auctionedItems = new ArrayList<>();
-        for (ItemStack stack : auctionedItems) {
+        this.bids = new HashMap<>();
+
+        // Copiar items
+        for (ItemStack stack : items) {
             this.auctionedItems.add(stack.copy());
         }
     }
 
-    // Constructor de copia
-    public Auction(Auction other) {
-        this.isActive = other.isActive;
-        this.auctioneer = other.auctioneer;
+    // Deserialización desde NBT
+    public static Auction fromNBT(CompoundNBT tag) {
+        boolean active = tag.getBoolean("Active");
+        UUID auctioneer = tag.getUUID("Auctioneer");
 
-        // Copia profunda de los items subastados
-        this.auctionedItems = new ArrayList<>();
-        for (ItemStack stack : other.auctionedItems) {
-            this.auctionedItems.add(stack.copy());
+        List<ItemStack> items = new ArrayList<>();
+        ListNBT itemsList = tag.getList("Items", 10);
+        for (int i = 0; i < itemsList.size(); i++) {
+            items.add(ItemStack.of(itemsList.getCompound(i)));
         }
 
-        // Copia profunda de las ofertas
-        for (Map.Entry<UUID, List<ItemStack>> entry : other.bids.entrySet()) {
-            List<ItemStack> bidCopy = new ArrayList<>();
-            for (ItemStack stack : entry.getValue()) {
-                bidCopy.add(stack.copy());
-            }
-            this.bids.put(entry.getKey(), bidCopy);
-        }
-    }
-
-    public List<ItemStack> getAuctionedItems() {
-        return new ArrayList<>(auctionedItems);
-    }
-
-    public UUID getAuctioneer() {
-        return auctioneer;
-    }
-
-    public void setAuctioneer(UUID auctioneer) {
-        this.auctioneer = auctioneer;
-    }
-
-    public Map<UUID, List<ItemStack>> getBids() {
-        return bids;
+        return new Auction(auctioneer, items, active);
     }
 
     public boolean isActive() {
@@ -62,6 +43,44 @@ public class Auction {
     }
 
     public void setActive(boolean active) {
-        isActive = active;
+        this.isActive = active;
+    }
+
+    public List<ItemStack> getAuctionedItems() {
+        return Collections.unmodifiableList(auctionedItems);
+    }
+
+    public UUID getAuctioneer() {
+        return auctioneer;
+    }
+
+    public Map<UUID, List<ItemStack>> getBids() {
+        return Collections.unmodifiableMap(bids);
+    }
+
+    public void addBid(UUID player, List<ItemStack> items) {
+        if (!isActive) return;
+        List<ItemStack> playerBid = new ArrayList<>();
+        for (ItemStack stack : items) {
+            playerBid.add(stack.copy());
+        }
+        bids.put(player, playerBid);
+    }
+
+    // Serialización para NBT
+    public CompoundNBT serializeNBT() {
+        CompoundNBT tag = new CompoundNBT();
+        tag.putBoolean("Active", isActive);
+        tag.putUUID("Auctioneer", auctioneer);
+
+        ListNBT itemsList = new ListNBT();
+        for (ItemStack stack : auctionedItems) {
+            CompoundNBT itemTag = new CompoundNBT();
+            stack.save(itemTag);
+            itemsList.add(itemTag);
+        }
+        tag.put("Items", itemsList);
+
+        return tag;
     }
 }

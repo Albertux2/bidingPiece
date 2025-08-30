@@ -25,6 +25,13 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
+
+            // >>> Usuario dev por defecto
+            args '--username', 'Albertux2', '--accessToken', '0'
+            // (opcional) para mantener inventario/perfil entre arranques offline, fija un UUID:
+            // args '--username', 'Albertux2', '--uuid', '00000000-0000-0000-0000-000000000000', '--accessToken', '0'
+            // <<<
+
             mods {
                 bidingpiece {
                     source sourceSets.main
@@ -68,12 +75,12 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Specification-Title": "biding-piece",
-                "Specification-Vendor": "Albertux2",
-                "Specification-Version": "1",
-                "Implementation-Title": project.name,
-                "Implementation-Version": version,
-                "Implementation-Vendor": "Albertux2",
+                "Specification-Title"     : "biding-piece",
+                "Specification-Vendor"    : "Albertux2",
+                "Specification-Version"   : "1",
+                "Implementation-Title"    : project.name,
+                "Implementation-Version"  : version,
+                "Implementation-Vendor"   : "Albertux2",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }

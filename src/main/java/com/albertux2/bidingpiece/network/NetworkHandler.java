@@ -26,18 +26,18 @@ public class NetworkHandler {
 
         INSTANCE.registerMessage(
             id++,
-            ToggleAuctionMessage.class,
-            ToggleAuctionMessage::encode,
-            ToggleAuctionMessage::decode,
-            ToggleAuctionMessage::handle
-        );
-
-        INSTANCE.registerMessage(
-            id++,
             UpdateAuctionStatePacket.class,
             UpdateAuctionStatePacket::encode,
             UpdateAuctionStatePacket::decode,
             UpdateAuctionStatePacket::handle
+        );
+
+        INSTANCE.registerMessage(
+            id++,
+            RequestAuctionStatePacket.class,
+            RequestAuctionStatePacket::encode,
+            RequestAuctionStatePacket::decode,
+            RequestAuctionStatePacket::handle
         );
     }
 }
