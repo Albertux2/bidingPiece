@@ -39,5 +39,29 @@ public class NetworkHandler {
             RequestAuctionStatePacket::decode,
             RequestAuctionStatePacket::handle
         );
+
+        INSTANCE.registerMessage(
+            id++,
+            SubmitBetPacket.class,
+            SubmitBetPacket::encode,
+            SubmitBetPacket::decode,
+            SubmitBetPacket::handle
+        );
+
+        INSTANCE.registerMessage(
+            id++,
+            RequestCurrentBetsPacket.class,
+            RequestCurrentBetsPacket::encode,
+            RequestCurrentBetsPacket::decode,
+            RequestCurrentBetsPacket::handle
+        );
+
+        INSTANCE.registerMessage(
+            id++,
+            UpdateCurrentBetsPacket.class,
+            UpdateCurrentBetsPacket::encode,
+            UpdateCurrentBetsPacket::decode,
+            UpdateCurrentBetsPacket::handle
+        );
     }
 }

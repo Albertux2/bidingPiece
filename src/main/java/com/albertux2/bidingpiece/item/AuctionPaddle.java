@@ -1,6 +1,6 @@
 package com.albertux2.bidingpiece.item;
 
-import com.albertux2.bidingpiece.client.component.screen.BettingScreen;
+import com.albertux2.bidingpiece.client.component.screen.ItemBettingScreen;
 import com.albertux2.bidingpiece.entity.BidingSeat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
@@ -23,6 +23,20 @@ public class AuctionPaddle extends Item {
         super(new Item.Properties().tab(ItemGroup.TAB_MISC).stacksTo(1));
     }
 
+    public static void removeFromPlayer(PlayerEntity player) {
+        int paddleIndex = IntStream.range(0, player.inventory.items.size())
+            .filter(i -> {
+                ItemStack itemStack = player.inventory.items.get(i);
+                return !itemStack.isEmpty() && itemStack.getItem() instanceof AuctionPaddle;
+            })
+            .findFirst()
+            .orElse(-1);
+
+        if (paddleIndex >= 0) {
+            player.inventory.setItem(paddleIndex, ItemStack.EMPTY);
+        }
+    }
+
     @Override
     public ActionResult<ItemStack> use(World world, PlayerEntity player, Hand hand) {
         if (world.isClientSide) {
@@ -41,9 +55,8 @@ public class AuctionPaddle extends Item {
 
     @OnlyIn(Dist.CLIENT)
     private void openBettingGUI() {
-        Minecraft.getInstance().setScreen(new BettingScreen());
+        Minecraft.getInstance().setScreen(new ItemBettingScreen(null));
     }
-
 
     @Override
     public boolean onDroppedByPlayer(ItemStack item, PlayerEntity player) {
@@ -60,19 +73,4 @@ public class AuctionPaddle extends Item {
         }
         super.inventoryTick(p_77663_1_, p_77663_2_, p_77663_3_, p_77663_4_, p_77663_5_);
     }
-
-    public static void removeFromPlayer(PlayerEntity player) {
-        int paddleIndex = IntStream.range(0, player.inventory.items.size())
-            .filter(i -> {
-                ItemStack itemStack = player.inventory.items.get(i);
-                return !itemStack.isEmpty() && itemStack.getItem() instanceof AuctionPaddle;
-            })
-            .findFirst()
-            .orElse(-1);
-
-        if (paddleIndex >= 0) {
-            player.inventory.setItem(paddleIndex, ItemStack.EMPTY);
-        }
-    }
-
 }

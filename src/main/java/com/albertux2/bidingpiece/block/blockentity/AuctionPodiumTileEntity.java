@@ -143,4 +143,8 @@ public class AuctionPodiumTileEntity extends TileEntity {
     public Auction getCurrentAuction() {
         return currentAuction;
     }
+
+    public boolean isAuctionActive() {
+        return currentAuction != null && currentAuction.isActive();
+    }
 }

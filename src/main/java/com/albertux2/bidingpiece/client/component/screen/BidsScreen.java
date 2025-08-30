@@ -3,9 +3,7 @@ package com.albertux2.bidingpiece.client.component.screen;
 import com.albertux2.bidingpiece.auction.Auction;
 import com.albertux2.bidingpiece.client.component.button.FancyButton;
 import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TextFormatting;
 
@@ -43,13 +41,9 @@ public class BidsScreen extends Screen {
     private void updateBidsList() {
         List<BetItem> bidItems = new ArrayList<>();
 
-        for (Map.Entry<UUID, List<ItemStack>> entry : auction.getBids().entrySet()) {
-            String playerName = Minecraft.getInstance().level.getPlayerByUUID(entry.getKey()) != null ?
-                Minecraft.getInstance().level.getPlayerByUUID(entry.getKey()).getName().getString() :
-                entry.getKey().toString().substring(0, 8);
-
-            for (ItemStack stack : entry.getValue()) {
-                bidItems.add(new BetItem(stack, stack.getCount()));
+        for (Map.Entry<UUID, List<BetItem>> entry : auction.getBids().entrySet()) {
+            for (BetItem stack : entry.getValue()) {
+                bidItems.add(new BetItem(stack.getStack(), stack.getQuantity()));
             }
         }
 

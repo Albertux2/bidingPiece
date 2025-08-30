@@ -78,7 +78,7 @@ public class SelectedListComponent {
             String name = stack.getHoverName().getString();
             String qty = "x" + bi.quantity;
             font.draw(ms, name, x + 20, ry + (itemH - font.lineHeight) / 2, 0xFFFFFF);
-            font.draw(ms, qty, xRight - 35, ry + (itemH - font.lineHeight) / 2, 0xFFFFFF);
+            font.draw(ms, qty, xRight - 50, ry + (itemH - font.lineHeight) / 2, 0xFFFFFF);
 
             if (visibleDeleteButton) {
                 int buttonX = xRight - 18;

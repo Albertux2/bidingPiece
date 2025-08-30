@@ -3,6 +3,9 @@ package com.albertux2.bidingpiece.client.component.screen;
 import com.albertux2.bidingpiece.client.component.DrawUtils;
 import com.albertux2.bidingpiece.client.component.button.FancyButton;
 import com.albertux2.bidingpiece.messaging.Messages;
+import com.albertux2.bidingpiece.network.NetworkHandler;
+import com.albertux2.bidingpiece.network.RequestCurrentBetsPacket;
+import com.albertux2.bidingpiece.network.SubmitBetPacket;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
@@ -70,6 +73,17 @@ public class ItemBettingScreen extends Screen {
         renderButtons();
 
         selectedListComponent = new SelectedListComponent(betItems, this.font, true);
+
+        NetworkHandler.INSTANCE.sendToServer(new RequestCurrentBetsPacket());
+    }
+
+    public void loadCurrentBets(List<BetItem> items) {
+        betItems.clear();
+        betItems.addAll(items);
+        if (selectedListComponent != null) {
+            selectedListComponent = new SelectedListComponent(betItems, this.font, true);
+        }
+        relayout();
     }
 
     private void renderButtons() {
@@ -187,6 +201,10 @@ public class ItemBettingScreen extends Screen {
     }
 
     private void submitBet() {
+        if (!betItems.isEmpty()) {
+            NetworkHandler.INSTANCE.sendToServer(new SubmitBetPacket(new ArrayList<>(betItems)));
+            this.minecraft.setScreen(null);
+        }
     }
 
     @Override
