@@ -20,7 +20,6 @@ public class Auction {
         this.auctionedItems = new ArrayList<>();
         this.bids = bids;
 
-        // Copiar items
         for (ItemStack stack : items) {
             this.auctionedItems.add(stack.copy());
         }

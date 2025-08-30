@@ -1,6 +1,5 @@
 package com.albertux2.bidingpiece.block;
 
-import com.albertux2.bidingpiece.auction.AuctionServerManager;
 import com.albertux2.bidingpiece.entity.BidingSeat;
 import com.albertux2.bidingpiece.entity.SeatableEntity;
 import com.albertux2.bidingpiece.item.AuctionPaddle;
@@ -86,15 +85,10 @@ public class BidingChair extends Block {
     }
 
     private ActionResultType handleUsing(BlockState state, World world, BlockPos pos, PlayerEntity player) {
-        AuctionServerManager bidingManger = AuctionServerManager.getInstance();
         if (player.isShiftKeyDown()) return ActionResultType.PASS;
         if (world.isClientSide) return ActionResultType.SUCCESS;
-        if (!bidingManger.hasAuctionStarted()) {
-            messageToPlayer(player, Messages.INACTIVE_AUCTION);
-            return ActionResultType.SUCCESS;
-        }
 
-        if(player.inventory.getFreeSlot() < 0) {
+        if (player.inventory.getFreeSlot() < 0) {
             messageToPlayer(player, Messages.AUCTION_FREE_SLOT_REQUIRED);
             return ActionResultType.SUCCESS;
         }

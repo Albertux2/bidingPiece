@@ -59,7 +59,6 @@ public class UpdateExhibitedItemsPacket {
         ctx.get().enqueueWork(() -> {
             NetworkEvent.Context context = ctx.get();
             if (context.getDirection().getReceptionSide().isClient()) {
-                // El cliente recibe la respuesta con los items
                 if (!msg.isRequest) {
                     Minecraft mc = Minecraft.getInstance();
                     if (mc.screen instanceof AuctionScreen) {

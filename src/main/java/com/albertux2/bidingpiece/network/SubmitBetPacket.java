@@ -17,6 +17,7 @@ import net.minecraftforge.fml.network.PacketDistributor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -31,7 +32,9 @@ public class SubmitBetPacket {
     public static void encode(SubmitBetPacket msg, PacketBuffer buf) {
         buf.writeInt(msg.items.size());
         msg.items.forEach(betItem -> {
-            CompoundNBT tag = betItem.stack.serializeNBT();
+            ItemStack copy = betItem.stack.copy();
+            copy.setCount(1);
+            CompoundNBT tag = copy.serializeNBT();
             buf.writeNbt(tag);
             buf.writeInt(betItem.quantity);
         });
@@ -59,16 +62,18 @@ public class SubmitBetPacket {
             Entity vehicle = player.getVehicle();
             BlockPos seatPos = vehicle.blockPosition();
 
+            final AtomicBoolean foundPodium = new AtomicBoolean(false);
             BlockPos.betweenClosed(
                 seatPos.offset(-SEARCH_RANGE, -SEARCH_RANGE, -SEARCH_RANGE),
                 seatPos.offset(SEARCH_RANGE, SEARCH_RANGE, SEARCH_RANGE)
             ).forEach(pos -> {
+                if (foundPodium.get()) return;
                 TileEntity te = world.getBlockEntity(pos);
                 if (te instanceof AuctionPodiumTileEntity) {
                     AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
+                    foundPodium.set(true);
                     if (podium.isAuctionActive()) {
                         if (hasAllItems(player, msg.items)) {
-
                             List<BetItem> betItems = msg.items.stream()
                                 .map(item -> {
                                     ItemStack newStack = item.stack.copy();
@@ -77,8 +82,7 @@ public class SubmitBetPacket {
                                 .collect(Collectors.toList());
 
                             podium.getCurrentAuction().getBids()
-                                .computeIfAbsent(player.getUUID(), k -> new ArrayList<>())
-                                .addAll(betItems);
+                                .put(player.getUUID(), betItems);
 
                             podium.setChanged();
 

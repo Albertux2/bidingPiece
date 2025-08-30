@@ -25,7 +25,6 @@ public class BidsScreen extends Screen {
 
     @Override
     protected void init() {
-        // Botón para volver
         this.addButton(new FancyButton(
             this.width / 2 - 100,
             this.height - 30,
@@ -34,7 +33,6 @@ public class BidsScreen extends Screen {
             button -> minecraft.setScreen(parentScreen)
         ));
 
-        // Inicializar la lista de ofertas
         updateBidsList();
     }
 
@@ -54,12 +52,10 @@ public class BidsScreen extends Screen {
     public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         this.renderBackground(matrixStack);
 
-        // Título
         drawCenteredString(matrixStack, font,
             new StringTextComponent("Current Bids").withStyle(TextFormatting.GOLD),
             this.width / 2, 20, 0xFFFFFF);
 
-        // Renderizar lista de ofertas
         if (bidsList != null) {
             int startY = 40;
             int itemH = Math.max(24, (int) Math.round(24 * 1.0));
