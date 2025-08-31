@@ -13,12 +13,14 @@ public class Auction {
     private final Map<UUID, List<BetItem>> bids;
     private final UUID auctioneer;
     private boolean isActive;
+    private UUID winner;
 
     public Auction(UUID auctioneer, List<ItemStack> items, boolean isActive, Map<UUID, List<BetItem>> bids) {
         this.auctioneer = auctioneer;
         this.isActive = isActive;
         this.auctionedItems = new ArrayList<>();
         this.bids = bids;
+        this.winner = null;
 
         for (ItemStack stack : items) {
             this.auctionedItems.add(stack.copy());
@@ -54,14 +56,20 @@ public class Auction {
             bids.put(playerUUID, playerBids);
         }
 
-        return new Auction(auctioneer, items, active, bids);
+        Auction auction = new Auction(auctioneer, items, active, bids);
+        if (tag.contains("Winner")) {
+            auction.winner = tag.getUUID("Winner");
+        }
+        return auction;
     }
 
     public CompoundNBT serializeNBT() {
         CompoundNBT tag = new CompoundNBT();
-
-        tag.putUUID("Auctioneer", auctioneer);
         tag.putBoolean("Active", isActive);
+        tag.putUUID("Auctioneer", auctioneer);
+        if (winner != null) {
+            tag.putUUID("Winner", winner);
+        }
 
         ListNBT itemsList = new ListNBT();
         for (ItemStack stack : auctionedItems) {
@@ -87,6 +95,10 @@ public class Auction {
         return tag;
     }
 
+    public UUID getOwner() {
+        return auctioneer;
+    }
+
     public boolean isActive() {
         return isActive;
     }
@@ -99,11 +111,15 @@ public class Auction {
         return Collections.unmodifiableList(auctionedItems);
     }
 
-    public UUID getAuctioneer() {
-        return auctioneer;
-    }
-
     public Map<UUID, List<BetItem>> getBids() {
         return bids;
+    }
+
+    public UUID getWinner() {
+        return winner;
+    }
+
+    public void setWinner(UUID winner) {
+        this.winner = winner;
     }
 }

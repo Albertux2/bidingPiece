@@ -3,6 +3,7 @@ package com.albertux2.bidingpiece.network;
 import com.albertux2.bidingpiece.auction.Auction;
 import com.albertux2.bidingpiece.block.blockentity.AuctionPodiumTileEntity;
 import com.albertux2.bidingpiece.client.component.screen.AuctionScreen;
+import com.albertux2.bidingpiece.client.component.screen.BidsScreen;
 import com.albertux2.bidingpiece.container.AuctionContainer;
 import com.albertux2.bidingpiece.messaging.Messager;
 import net.minecraft.client.Minecraft;
@@ -58,6 +59,11 @@ public class UpdateAuctionStatePacket {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof AuctionScreen) {
             AuctionScreen screen = (AuctionScreen) mc.screen;
+            screen.updateAuctionState(msg.auction);
+        }
+
+        if (mc.screen instanceof BidsScreen) {
+            BidsScreen screen = (BidsScreen) mc.screen;
             screen.updateAuctionState(msg.auction);
         }
     }

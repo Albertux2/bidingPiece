@@ -6,6 +6,7 @@ import com.albertux2.bidingpiece.messaging.Messages;
 import com.albertux2.bidingpiece.network.NetworkHandler;
 import com.albertux2.bidingpiece.network.RequestCurrentBetsPacket;
 import com.albertux2.bidingpiece.network.SubmitBetPacket;
+import com.albertux2.bidingpiece.registry.ModItems;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
@@ -26,6 +27,7 @@ public class ItemBettingScreen extends Screen {
     private static final int SCROLLBAR_W = 6;
     private static final int PAD_L = 16;
     private static final int PAD_R = 16;
+    private static final ItemStack COMPARING_PADDLE = new ItemStack(ModItems.AUCTION_PADDLE.get(), 1);
 
     private final Screen parent;
     private final PlayerEntity player;
@@ -214,7 +216,6 @@ public class ItemBettingScreen extends Screen {
 
         int panelTop = this.height - bottomPanelH;
         fill(ms, PAD_L, panelTop, this.width - PAD_R, this.height, 0xB0202020);
-
         layoutBottomRow(ms, panelTop);
 
         renderInventory(ms, mouseX, mouseY);
@@ -371,7 +372,10 @@ public class ItemBettingScreen extends Screen {
     private List<ItemStack> flattenInventory(PlayerEntity player) {
         NonNullList<ItemStack> items = player.inventory.items;
         Map<String, BetItem> flattened = new HashMap<>();
-        items.stream().filter(i -> !i.isEmpty()).forEach(x -> flattened.computeIfAbsent(x.getItem().getDescriptionId(), s -> new BetItem(x, 0)).sumQuantity(x.getCount()));
+        items.stream()
+            .filter(i -> !i.isEmpty())
+            .filter(i -> !ItemStack.isSame(i, COMPARING_PADDLE))
+            .forEach(x -> flattened.computeIfAbsent(x.getItem().getDescriptionId(), s -> new BetItem(x, 0)).sumQuantity(x.getCount()));
         return flattened.values().stream().map(x -> new ItemStack(x.stack.getItem(), x.quantity)).collect(Collectors.toList());
     }
 }

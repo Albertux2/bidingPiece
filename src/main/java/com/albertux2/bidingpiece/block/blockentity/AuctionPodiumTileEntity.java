@@ -15,6 +15,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class AuctionPodiumTileEntity extends TileEntity {
@@ -146,5 +147,21 @@ public class AuctionPodiumTileEntity extends TileEntity {
 
     public boolean isAuctionActive() {
         return currentAuction != null && currentAuction.isActive();
+    }
+
+    public void setWinner(UUID winner) {
+        if (level != null && !level.isClientSide && currentAuction != null) {
+            currentAuction.setWinner(winner);
+            setChanged();
+            broadcastCurrentState();
+        }
+    }
+
+    public void finishAuction() {
+        if (level != null && !level.isClientSide && currentAuction != null) {
+            currentAuction.setActive(false);
+            setChanged();
+            broadcastCurrentState();
+        }
     }
 }

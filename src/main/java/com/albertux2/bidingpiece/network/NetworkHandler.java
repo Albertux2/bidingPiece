@@ -50,6 +50,14 @@ public class NetworkHandler {
 
         INSTANCE.registerMessage(
             id++,
+            SelectWinnerMessage.class,
+            SelectWinnerMessage::encode,
+            SelectWinnerMessage::decode,
+            SelectWinnerMessage::handle
+        );
+
+        INSTANCE.registerMessage(
+            id++,
             RequestCurrentBetsPacket.class,
             RequestCurrentBetsPacket::encode,
             RequestCurrentBetsPacket::decode,

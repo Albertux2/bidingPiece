@@ -67,10 +67,10 @@ public class AuctionPodium extends HorizontalBlock {
             TileEntity te = world.getBlockEntity(pos);
             if (te instanceof AuctionPodiumTileEntity && player instanceof ServerPlayerEntity) {
                 AuctionPodiumTileEntity podiumTE = (AuctionPodiumTileEntity) te;
-                if (podiumTE.getCurrentAuction() != null && !player.getUUID().equals(podiumTE.getCurrentAuction().getAuctioneer())) {
+                if (podiumTE.getCurrentAuction() != null && !player.getUUID().equals(podiumTE.getCurrentAuction().getOwner())) {
                     Messager.messageToPlayer(player,
                         String.format("There is an active auction. Only the auctioneer (%s) can manage it.",
-                            world.getPlayerByUUID(podiumTE.getCurrentAuction().getAuctioneer()).getName().getString()));
+                            world.getPlayerByUUID(podiumTE.getCurrentAuction().getOwner()).getName().getString()));
                     return ActionResultType.SUCCESS;
                 }
                 ServerPlayerEntity serverPlayer = (ServerPlayerEntity) player;

@@ -19,6 +19,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import java.util.stream.IntStream;
 
 public class AuctionPaddle extends Item {
+
     public AuctionPaddle() {
         super(new Item.Properties().tab(ItemGroup.TAB_MISC).stacksTo(1));
     }
