@@ -69,6 +69,11 @@ public class AuctionPaddle extends Item {
     public void inventoryTick(ItemStack p_77663_1_, World p_77663_2_, Entity p_77663_3_, int p_77663_4_,
         boolean p_77663_5_) {
         PlayerEntity player = (PlayerEntity) p_77663_3_;
+        if (player.tickCount % 20 != 0) {
+            super.inventoryTick(p_77663_1_, p_77663_2_, p_77663_3_, p_77663_4_, p_77663_5_);
+            return;
+        }
+        
         if (player.getVehicle() == null || !(player.getVehicle() instanceof BidingSeat)) {
             removeFromPlayer(player);
         }

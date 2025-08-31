@@ -74,7 +74,7 @@ public class UpdateAuctionStatePacket {
             AuctionPodiumTileEntity podium = container.getTileEntity();
 
             if (podium != null) {
-                if (podium.getCurrentAuction() == null) {
+                if (!podium.isAuctionActive()) {
                     sendAuctionStartedMessage(ctx, podium.getExhibitedItems());
                 }
                 podium.updateAuctionState(msg.auction);

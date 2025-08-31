@@ -1,12 +1,12 @@
 package com.albertux2.bidingpiece.network;
 
 import com.albertux2.bidingpiece.auction.Auction;
+import com.albertux2.bidingpiece.block.blockentity.AuctionExhibitorTileEntity;
 import com.albertux2.bidingpiece.block.blockentity.AuctionPodiumTileEntity;
 import com.albertux2.bidingpiece.client.component.screen.BetItem;
 import com.albertux2.bidingpiece.client.component.screen.BidsScreen;
 import com.albertux2.bidingpiece.messaging.Messager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
@@ -20,9 +20,7 @@ import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.fml.network.NetworkEvent;
 import net.minecraftforge.fml.network.PacketDistributor;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -46,28 +44,82 @@ public class SelectWinnerMessage {
 
     public static void handle(SelectWinnerMessage msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context event = ctx.get();
-        event.enqueueWork(() -> {
-            if (event.getSender().level.isClientSide) return;
-            ServerWorld world = event.getSender().getLevel();
-            TileEntity te = world.getBlockEntity(msg.podiumPos);
-            if (te instanceof AuctionPodiumTileEntity) {
-                ServerPlayerEntity winner = (ServerPlayerEntity) world.getPlayerByUUID(msg.winner);
-                if (winner == null || !hasAllItems(winner, ((AuctionPodiumTileEntity) te).getCurrentAuction().getBids().get(msg.winner))) {
-                    Screen screen = net.minecraft.client.Minecraft.getInstance().screen;
-                    if (screen instanceof BidsScreen) {
-                        ((com.albertux2.bidingpiece.client.component.screen.BidsScreen) screen).setErrorMessage("Selected winner does not have the required items in their inventory.");
-                    }
-                    return;
+        if (event.getDirection().getReceptionSide().isClient()) {
+            event.enqueueWork(() -> {
+                if (Minecraft.getInstance().screen instanceof BidsScreen) {
+                    Minecraft.getInstance().setScreen(null);
                 }
-                AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
-                podium.setWinner(msg.winner);
-                podium.finishAuction();
-                NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
-                    new UpdateAuctionStatePacket(podium.getCurrentAuction()));
-                sendUserWinnerNotification(event, podium.getCurrentAuction().getBids().get(podium.getCurrentAuction().getWinner()), podium.getCurrentAuction());
-                Minecraft.getInstance().setScreen(null);
+            });
+            event.setPacketHandled(true);
+            return;
+        }
+
+        ServerWorld world = event.getSender().getLevel();
+        world.getServer().execute(() -> {
+            TileEntity te = world.getBlockEntity(msg.podiumPos);
+            if (!(te instanceof AuctionPodiumTileEntity)) return;
+
+            AuctionPodiumTileEntity podium = (AuctionPodiumTileEntity) te;
+            ServerPlayerEntity winner = (ServerPlayerEntity) world.getPlayerByUUID(msg.winner);
+            ServerPlayerEntity sender = event.getSender();
+
+            if (winner == null || !hasAllItems(winner, podium.getCurrentAuction().getBids().get(msg.winner))) {
+                sender.sendMessage(new StringTextComponent("El ganador seleccionado no tiene los items requeridos en su inventario.")
+                    .withStyle(style -> style.withColor(Color.fromRgb(0xFF4500))), sender.getUUID());
+                return;
             }
+
+            // Remover items de la apuesta del ganador
+            List<BetItem> winnerBids = podium.getCurrentAuction().getBids().get(msg.winner);
+            for (BetItem bid : winnerBids) {
+                removeItemFromInventory(winner, bid.getStack(), bid.getQuantity());
+            }
+
+            // Obtener y limpiar items exhibidos
+            boolean someItemDropped = false;
+            List<AuctionExhibitorTileEntity> nearbyExhibitors = getNearbyExhibitors(world, podium);
+
+            for (AuctionExhibitorTileEntity exhibitor : nearbyExhibitors) {
+                ItemStack displayedItem = exhibitor.getDisplayedItem();
+                if (!displayedItem.isEmpty()) {
+                    someItemDropped |= giveItemsToPlayer(winner, displayedItem.copy(), displayedItem.getCount());
+                    exhibitor.setDisplayedItem(ItemStack.EMPTY);
+                    exhibitor.setChanged();
+                }
+            }
+
+            // Sincronizar el inventario al cliente
+            winner.inventoryMenu.broadcastChanges();
+
+            if (someItemDropped) {
+                winner.sendMessage(new StringTextComponent("¡Algunos items se han caído al suelo por falta de espacio!")
+                    .withStyle(style -> style.withColor(Color.fromRgb(0xFF4500)).withBold(true)), winner.getUUID());
+            }
+
+            // Finalizar la subasta y notificar
+            podium.setWinner(msg.winner);
+            podium.finishAuction();
+            podium.setChanged();
+
+            NetworkHandler.INSTANCE.send(
+                PacketDistributor.ALL.noArg(),
+                new UpdateAuctionStatePacket(podium.getCurrentAuction()));
+
+            sendUserWinnerNotification(event, winnerBids, podium.getCurrentAuction());
+
+            // Forzar sincronización de los cambios
+            world.markAndNotifyBlock(podium.getBlockPos(), null, world.getBlockState(podium.getBlockPos()),
+                world.getBlockState(podium.getBlockPos()), 3, 512);
+
+            for (AuctionExhibitorTileEntity exhibitor : nearbyExhibitors) {
+                world.markAndNotifyBlock(exhibitor.getBlockPos(), null, world.getBlockState(exhibitor.getBlockPos()),
+                    world.getBlockState(exhibitor.getBlockPos()), 3, 512);
+            }
+
+            // Enviar mensaje para cerrar la pantalla a todos los clientes
+            NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), msg);
         });
+
         event.setPacketHandled(true);
     }
 
@@ -98,16 +150,80 @@ public class SelectWinnerMessage {
     }
 
     private static boolean hasAllItems(ServerPlayerEntity player, List<BetItem> items) {
-        final Map<String, Integer> playerItems = player.inventory.items.stream()
-            .filter(stack -> !stack.isEmpty())
-            .collect(Collectors.groupingBy(
-                stack -> stack.getItem().getRegistryName().toString(),
-                Collectors.summingInt(ItemStack::getCount)
-            ));
+        if (items == null) return false;
 
-        return items.stream().allMatch(betItem -> {
-            String itemId = betItem.stack.getItem().getRegistryName().toString();
-            return playerItems.containsKey(itemId) && playerItems.get(itemId) >= betItem.quantity;
-        });
+        Map<String, Integer> playerItems = new HashMap<>();
+        for (ItemStack stack : player.inventory.items) {
+            if (!stack.isEmpty()) {
+                String itemId = stack.getItem().getRegistryName().toString();
+                playerItems.merge(itemId, stack.getCount(), Integer::sum);
+            }
+        }
+
+        for (BetItem bidItem : items) {
+            String itemId = bidItem.getStack().getItem().getRegistryName().toString();
+            Integer count = playerItems.get(itemId);
+            if (count == null || count < bidItem.getQuantity()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void removeItemFromInventory(ServerPlayerEntity player, ItemStack stack, int count) {
+        int remaining = count;
+        String targetItemId = stack.getItem().getRegistryName().toString();
+
+        for (int i = 0; i < player.inventory.getContainerSize() && remaining > 0; i++) {
+            ItemStack invStack = player.inventory.getItem(i);
+            if (!invStack.isEmpty() && invStack.getItem().getRegistryName().toString().equals(targetItemId)) {
+                int toRemove = Math.min(remaining, invStack.getCount());
+                invStack.shrink(toRemove);
+                remaining -= toRemove;
+
+                if (invStack.isEmpty()) {
+                    player.inventory.setItem(i, ItemStack.EMPTY);
+                }
+            }
+        }
+        player.containerMenu.broadcastChanges();
+    }
+
+    private static boolean giveItemsToPlayer(ServerPlayerEntity player, ItemStack stack, int count) {
+        if (count <= 0) return false;
+
+        int maxStackSize = stack.getMaxStackSize();
+        int remaining = count;
+        boolean someItemDropped = false;
+
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, maxStackSize);
+            ItemStack newStack = stack.copy();
+            newStack.setCount(stackSize);
+
+            if (!player.inventory.add(newStack)) {
+                player.drop(newStack, false);
+                someItemDropped = true;
+            }
+
+            remaining -= stackSize;
+        }
+
+        player.containerMenu.broadcastChanges();
+        return someItemDropped;
+    }
+
+    private static List<AuctionExhibitorTileEntity> getNearbyExhibitors(World world, AuctionPodiumTileEntity podium) {
+        List<AuctionExhibitorTileEntity> exhibitors = new ArrayList<>();
+        List<BlockPos> positions = podium.getNearbyExhibitors();
+
+        for (BlockPos pos : positions) {
+            TileEntity te = world.getBlockEntity(pos);
+            if (te instanceof AuctionExhibitorTileEntity) {
+                exhibitors.add((AuctionExhibitorTileEntity) te);
+            }
+        }
+
+        return exhibitors;
     }
 }
