@@ -140,6 +140,11 @@ public class AuctionScreen extends ContainerScreen<AuctionContainer> {
     }
 
     @Override
+    protected void renderLabels(MatrixStack ms, int x, int y) {
+        // No renderizar nada aquí para ocultar el título del inventario
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (selectedListComponent != null && selectedListComponent.clicked(mouseX, mouseY)) return true;
         return super.mouseClicked(mouseX, mouseY, button);

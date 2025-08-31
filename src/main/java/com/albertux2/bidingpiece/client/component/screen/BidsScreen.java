@@ -113,7 +113,10 @@ public class BidsScreen extends Screen {
 
         // Render user list in the upper half
         if (userList != null) {
-            userList.setLayout(width, 40, 36);
+            int startY = 40;
+            int itemHeight = 36;
+            userList.setLayout(width, startY, itemHeight);
+            userList.setVisibleRows(Math.min(4, Math.max(2, (this.height / 2 - startY - 40) / itemHeight)));
             userList.render(matrixStack);
         }
 
@@ -186,7 +189,7 @@ public class BidsScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (mouseY < this.height / 2 && userList != null) {
-            return true;
+            return userList.mouseScrolled(mouseX, mouseY, delta);
         } else if (bidsList != null && bidsList.mouseScrolled(mouseX, mouseY, delta)) {
             return true;
         }
