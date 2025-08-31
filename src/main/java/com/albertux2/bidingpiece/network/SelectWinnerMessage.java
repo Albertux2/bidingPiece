@@ -64,18 +64,16 @@ public class SelectWinnerMessage {
             ServerPlayerEntity sender = event.getSender();
 
             if (winner == null || !hasAllItems(winner, podium.getCurrentAuction().getBids().get(msg.winner))) {
-                sender.sendMessage(new StringTextComponent("El ganador seleccionado no tiene los items requeridos en su inventario.")
+                sender.sendMessage(new StringTextComponent("The winner does not have all the items for the bet!")
                     .withStyle(style -> style.withColor(Color.fromRgb(0xFF4500))), sender.getUUID());
                 return;
             }
 
-            // Remover items de la apuesta del ganador
             List<BetItem> winnerBids = podium.getCurrentAuction().getBids().get(msg.winner);
             for (BetItem bid : winnerBids) {
                 removeItemFromInventory(winner, bid.getStack(), bid.getQuantity());
             }
 
-            // Obtener y limpiar items exhibidos
             boolean someItemDropped = false;
             List<AuctionExhibitorTileEntity> nearbyExhibitors = getNearbyExhibitors(world, podium);
 
@@ -88,11 +86,10 @@ public class SelectWinnerMessage {
                 }
             }
 
-            // Sincronizar el inventario al cliente
             winner.inventoryMenu.broadcastChanges();
 
             if (someItemDropped) {
-                winner.sendMessage(new StringTextComponent("¡Algunos items se han caído al suelo por falta de espacio!")
+                winner.sendMessage(new StringTextComponent("Alert: Some items were dropped on the ground due to lack of inventory space.")
                     .withStyle(style -> style.withColor(Color.fromRgb(0xFF4500)).withBold(true)), winner.getUUID());
             }
 
