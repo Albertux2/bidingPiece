@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.network.play.server.SSetSlotPacket;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.Color;
@@ -86,7 +87,8 @@ public class SelectWinnerMessage {
                 }
             }
 
-            winner.inventoryMenu.broadcastChanges();
+            // Sincronizar todo el inventario del jugador con el cliente
+            syncPlayerInventory(winner);
 
             if (someItemDropped) {
                 winner.sendMessage(new StringTextComponent("Alert: Some items were dropped on the ground due to lack of inventory space.")
@@ -181,9 +183,10 @@ public class SelectWinnerMessage {
                 if (invStack.isEmpty()) {
                     player.inventory.setItem(i, ItemStack.EMPTY);
                 }
+                // Sincronizar el slot específico modificado
+                player.connection.send(new SSetSlotPacket(-2, i, player.inventory.getItem(i)));
             }
         }
-        player.containerMenu.broadcastChanges();
     }
 
     private static boolean giveItemsToPlayer(ServerPlayerEntity player, ItemStack stack, int count) {
@@ -206,8 +209,23 @@ public class SelectWinnerMessage {
             remaining -= stackSize;
         }
 
-        player.containerMenu.broadcastChanges();
         return someItemDropped;
+    }
+
+    /**
+     * Sincroniza todo el inventario del jugador con el cliente
+     */
+    private static void syncPlayerInventory(ServerPlayerEntity player) {
+        for (int i = 0; i < player.inventory.getContainerSize(); i++) {
+            player.connection.send(new SSetSlotPacket(-2, i, player.inventory.getItem(i)));
+        }
+
+        for (int i = 0; i < 9; i++) {
+            player.connection.send(new SSetSlotPacket(-2, i, player.inventory.getItem(i)));
+        }
+
+        // Sincronizar el contenedor actual si está abierto
+        player.containerMenu.broadcastChanges();
     }
 
     private static List<AuctionExhibitorTileEntity> getNearbyExhibitors(World world, AuctionPodiumTileEntity podium) {

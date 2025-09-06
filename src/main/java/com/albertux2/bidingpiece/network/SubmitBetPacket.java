@@ -3,6 +3,7 @@ package com.albertux2.bidingpiece.network;
 import com.albertux2.bidingpiece.block.blockentity.AuctionPodiumTileEntity;
 import com.albertux2.bidingpiece.client.component.screen.BetItem;
 import com.albertux2.bidingpiece.entity.BidingSeat;
+import com.albertux2.bidingpiece.messaging.Messager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -10,6 +11,9 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.Color;
+import net.minecraft.util.text.IFormattableTextComponent;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.fml.network.NetworkEvent;
 import net.minecraftforge.fml.network.PacketDistributor;
@@ -96,12 +100,41 @@ public class SubmitBetPacket {
                                 ),
                                 new UpdateAuctionStatePacket(podium.getCurrentAuction())
                             );
+                            betBroadcast(world, player, betItems);
                         }
+                    } else {
+                        Messager.messageToPlayer(player, "There's no active auction.");
                     }
                 }
             });
         });
         ctx.get().setPacketHandled(true);
+    }
+
+    private static void betBroadcast(ServerWorld world, ServerPlayerEntity player, List<BetItem> items) {
+        IFormattableTextComponent itemsMessage = items.stream()
+            .map(item -> new StringTextComponent(String.format("  - %s x%d\n",
+                item.getStack().getHoverName().getString(), item.getQuantity()))
+                .withStyle(style -> style
+                    .withColor(Color.fromRgb(0xFFD700))  // Dorado para los items
+                    .withBold(true)))
+            .reduce(new StringTextComponent("\nBet items: \n")
+                .withStyle(style -> style
+                    .withColor(Color.fromRgb(0xC0C0C0))  // Plateado para el encabezado
+                    .withBold(true)),
+                IFormattableTextComponent::append,
+                IFormattableTextComponent::append);
+
+        IFormattableTextComponent playerMessage = new StringTextComponent(player.getName().getString())
+            .withStyle(style -> style
+                .withColor(Color.fromRgb(0x00FF00))  // Verde para el nombre del jugador
+                .withBold(true))
+            .append(new StringTextComponent(" has placed a bet!")
+                .withStyle(style -> style
+                    .withColor(Color.fromRgb(0xFFFFFF))  // Blanco para el texto principal
+                    .withBold(true)));
+
+        Messager.broadcastMessage(world, playerMessage.append(itemsMessage));
     }
 
     private static boolean hasAllItems(ServerPlayerEntity player, List<BetItem> items) {
